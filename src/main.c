@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "readFile.h"
-
+#include "huffman.h"
 void showHelp()
 {
 	printf("Prawidłowe wywołanie: ./prog <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
@@ -34,6 +34,8 @@ int main(int argc, char **argv)
 	
 	/*file1->bigbuffer=malloc(file1->length * sizeof(file1->bigbuffer));*/
 	unsigned char *bigbuffer = malloc( file1->length * sizeof(*bigbuffer));
+
+	dictionary *dict1 = NULL;
 	if(argc<3)
 	{
 		showHelp();
@@ -122,9 +124,18 @@ int main(int argc, char **argv)
 	{
 		printf("Symbol %d: %c and its frequency: %d\n", iter->value, iter->value, iter->freq);
 	}
+
+	dict1 = makeDictionary(file1, charinfo1);
+	printf("distinct chars: %d\n", file1->distinctChars);
+	
+	dictionary *iterDictionary;
+	for(iterDictionary = dict1; iterDictionary != NULL; iterDictionary=iterDictionary->next)
+	{
+		printf("Symbol no. %d: %c and its code %s\n", iterDictionary->symbol, iterDictionary->symbol, iterDictionary->code);
+	}
+
 	fclose(infile);
 	fclose(outfile);
-	printf("distinct chars: %d\n", file1->distinctChars);
 	free(bigbuffer);
 	free(file1);
 	freecharInfo(charinfo1);
