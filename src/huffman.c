@@ -158,6 +158,47 @@ dictionary *addToDictionary(dictionary *dict, node *leaf)
 	return dict;
 }
 
+void freeTree(node *currNode)
+{
+	if(currNode == NULL)
+	{
+		return;
+	}else{
+		freeTree(currNode->leftChild);
+
+		freeTree(currNode->rightChild);
+
+		free(currNode);
+	}
+}
+
+void freeDict(dictionary *dict1)
+{
+	dictionary *i;
+	dictionary *tmp;
+	if(dict1 == NULL)
+	{
+		return;
+	}
+	else if(dict1->next == NULL)
+	{
+		free(dict1->code);
+		free(dict1);
+	}
+	else
+	{
+		tmp = dict1;
+		for(i=dict1->next; i->next != NULL; i=i->next)
+		{
+			free(tmp->code);
+			free(tmp);
+			tmp = i;
+		}
+		free(i->code);
+		free(i);
+	}	
+}
+
 dictionary *makeDictionary(fileInfo_t file1, charInfo *charInfo1)
 {
 	int i, j;
@@ -196,5 +237,7 @@ dictionary *makeDictionary(fileInfo_t file1, charInfo *charInfo1)
 	{
 		dict1 = addToDictionary(dict1, nodes[i]);
 	}
+	freeTree(prior1->Qnode);
+	free(prior1);
 	return dict1;
 }

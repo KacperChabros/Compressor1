@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 	outfile=fopen(argv[2],"wb");
 	if(infile==NULL || outfile==NULL)
 	{
-		printf("Nie udało się otworzyć plików\n");
+		printf("A problem occurred with opening files\n");
 		return 2;
 	}
 	bigbuffer=readfile(file1,infile, bigbuffer);
@@ -139,5 +139,6 @@ int main(int argc, char **argv)
 	free(bigbuffer);
 	free(file1);
 	freecharInfo(charinfo1);
+	freeDict(dict1);
 	return 0;
 }

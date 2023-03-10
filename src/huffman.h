@@ -26,4 +26,5 @@ typedef struct dictionary{
 
 dictionary *makeDictionary(fileInfo_t file1, charInfo *charInfo1);
 
+void freeDict(dictionary *dict1);
 #endif
