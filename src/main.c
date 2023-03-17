@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include "readFile.h"
 #include "huffman.h"
+#include "compress.h"
+#include "cypher.h"
 void showHelp()
 {
 	printf("Prawidłowe wywołanie: ./prog <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
@@ -18,6 +20,8 @@ void showHelp()
        	printf("-c <password> Cypher input file with the given password. This parameter must be given separately or at the end of other parameters.\n"); 
 	printf("-v Display additional informations.\n");
 }
+void isValid(unsigned char checkSum, FILE *infile);
+
 int main(int argc, char **argv)
 {
 	bool decompress=false,compress=false,cypher=false,info=false;/*Flagi dla parametrów: x-decompress z-compress c-cypher v-info*/
@@ -25,6 +29,7 @@ int main(int argc, char **argv)
 	FILE *infile,*outfile;
 	char *password=NULL;
 	int i,j;
+	unsigned char checksum=0b10001001;
 	fileInfo_t file1=malloc(sizeof(file1));
 	file1->length=1000;
 	file1->counter=0;
@@ -112,13 +117,17 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	bigbuffer=readfile(file1,infile, bigbuffer);
-	charinfo1=frequency(file1,bigbuffer,charinfo1);
-	printf("file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
 	for(i=0; i<file1->counter; i++)
 	{
-		fwrite( (bigbuffer+i), 1, 1, outfile);
+		printf("Code of symbol: %d\n", bigbuffer[i]);
 	}
-	
+	printf("------------------------------------");
+	charinfo1=frequency(file1,bigbuffer,charinfo1);
+	printf("file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
+	/*for(i=0; i<file1->counter; i++)
+	{
+		fwrite( (bigbuffer+i), 1, 1, outfile);
+	}*/
 	charInfo *iter;
 	for(iter = charinfo1; iter != NULL; iter=iter->next)
 	{
@@ -131,14 +140,78 @@ int main(int argc, char **argv)
 	dictionary *iterDictionary;
 	for(iterDictionary = dict1; iterDictionary != NULL; iterDictionary=iterDictionary->next)
 	{
-		printf("Symbol no. %d: %c and its code %s\n", iterDictionary->symbol, iterDictionary->symbol, iterDictionary->code);
+		printf("Symbol no. %d: %c and its code %s and its size %d\n ", iterDictionary->symbol, iterDictionary->symbol, iterDictionary->code, iterDictionary->bitLength);
 	}
-
-	fclose(infile);
+	binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum);
+	printf("NAPISALEM BINARY\n");
 	fclose(outfile);
+	if(cypher==true)
+	{	
+			
+		outfile=fopen(argv[2],"rb");
+		fileInfo_t file2=malloc(sizeof(file2));
+        	file2->length=file1->length/2;
+       		file2->counter=0;
+        	file2->distinctChars=0;
+        	unsigned char *bigbuffer2 = malloc( file2->length * sizeof(*bigbuffer2));
+		bigbuffer2=readfile(file2,outfile,bigbuffer2);
+		fclose(outfile);	
+		outfile=fopen(argv[2],"wb");
+		xorcode(file2->counter,outfile,bigbuffer2,password);
+		/*fclose(outfile);
+		outfile=fopen(argv[2],"wb");
+		xorcode(file2->counter,outfile,bigbuffer2,password);*/
+		free(bigbuffer2);
+		free(file2);
+		fclose(outfile);
+	}
+	fclose(infile);
+	if(decompress==true)
+	{
+		infile=fopen(argv[1],"rb");
+		isValid(checksum, infile);
+		fclose(infile);
+	}
+	//fclose(outfile);
 	free(bigbuffer);
 	free(file1);
 	freecharInfo(charinfo1);
 	freeDict(dict1);
 	return 0;
+}
+
+void isValid(unsigned char checkSum, FILE *infile)
+{
+	unsigned char buffer[1];
+	unsigned char tmpSum;
+	fread(buffer, 1, 1, infile);
+	if(buffer[0] != 'S')
+	{
+		printf("This file hasn't been compressed by this program\n");
+		return;
+	}
+	fread(buffer, 1, 1, infile);
+	if(buffer[0] != 'K')
+	{
+		printf("This file hasn't been compressed by this program\n");
+		return;
+	}
+
+	fread(buffer, 1, 1, infile);
+	if(fread(buffer, 1, 1, infile) == 1)
+	{
+		tmpSum = buffer[0];
+	}else{
+		return;
+	}
+	while(fread(buffer, 1, 1, infile) == 1)
+	{
+		tmpSum = tmpSum ^ buffer[0];
+	}
+	if(tmpSum == checkSum)
+	{
+		printf("The file is valid!\n");
+	}else{
+		printf("The file is corrupted\n");
+	}
 }

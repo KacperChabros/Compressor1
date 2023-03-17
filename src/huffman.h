@@ -18,6 +18,7 @@ typedef struct priorityQ{
 
 typedef struct dictionary{
 	unsigned char symbol;
+	int bitLength;
 	char *code;
 	struct dictionary *next;
 } dictionary;

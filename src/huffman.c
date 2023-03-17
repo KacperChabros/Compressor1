@@ -139,12 +139,14 @@ dictionary *addToDictionary(dictionary *dict, node *leaf)
 	{
 		dict = malloc(sizeof(dict));
 		dict->symbol = leaf->value;
+		dict->bitLength = codeLength;
 		dict->code = malloc( codeLength * sizeof(dict->code));
 		strcpy(dict->code, currCode);
 		dict->next = NULL;
 	}else{
 		dictionary *tmp = malloc(sizeof(*tmp));
 		tmp->symbol = leaf->value;
+		tmp->bitLength = codeLength;
 		tmp->code = malloc(codeLength * sizeof(tmp->code));
 		strcpy(tmp->code, currCode);
 		tmp->next = NULL;
