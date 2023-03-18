@@ -182,6 +182,7 @@ int main(int argc, char **argv)
 
 void isValid(unsigned char checkSum, FILE *infile)
 {
+	int i;
 	unsigned char buffer[1];
 	unsigned char tmpSum;
 	fread(buffer, 1, 1, infile);
@@ -204,9 +205,18 @@ void isValid(unsigned char checkSum, FILE *infile)
 	}else{
 		return;
 	}
+	fseek(infile,4,SEEK_CUR);
 	while(fread(buffer, 1, 1, infile) == 1)
 	{
 		tmpSum = tmpSum ^ buffer[0];
+	}
+	fseek(infile, 4 ,SEEK_SET);
+	for(i=0; i<4; i++)
+	{
+		if(fread(buffer, 1, 1, infile) == 1)
+		{
+			tmpSum = tmpSum ^ buffer[0];
+		}
 	}
 	if(tmpSum == checkSum)
 	{
