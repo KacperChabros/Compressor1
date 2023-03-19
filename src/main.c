@@ -5,6 +5,7 @@
 #include "huffman.h"
 #include "compress.h"
 #include "cypher.h"
+#include "decompress.h"
 void showHelp()
 {
 	printf("Prawidłowe wywołanie: ./prog <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
@@ -20,7 +21,6 @@ void showHelp()
        	printf("-c <password> Cypher input file with the given password. This parameter must be given separately or at the end of other parameters.\n"); 
 	printf("-v Display additional informations.\n");
 }
-void isValid(unsigned char checkSum, FILE *infile);
 
 int main(int argc, char **argv)
 {
@@ -114,6 +114,8 @@ int main(int argc, char **argv)
 	if(infile==NULL || outfile==NULL)
 	{
 		printf("A problem occurred with opening files\n");
+		free(file1);
+		free(bigbuffer);
 		return 2;
 	}
 	bigbuffer=readfile(file1,infile, bigbuffer);
@@ -170,7 +172,8 @@ int main(int argc, char **argv)
 	{
 		infile=fopen(argv[1],"rb");
 		isValid(checksum, infile);
-		fclose(infile);
+		//fclose(infile);
+		decompressFile(infile, argv[2], checksum);
 	}
 	//fclose(outfile);
 	free(bigbuffer);
@@ -178,50 +181,4 @@ int main(int argc, char **argv)
 	freecharInfo(charinfo1);
 	freeDict(dict1);
 	return 0;
-}
-
-void isValid(unsigned char checkSum, FILE *infile)
-{
-	int i;
-	unsigned char buffer[1];
-	unsigned char tmpSum;
-	fread(buffer, 1, 1, infile);
-	if(buffer[0] != 'S')
-	{
-		printf("This file hasn't been compressed by this program\n");
-		return;
-	}
-	fread(buffer, 1, 1, infile);
-	if(buffer[0] != 'K')
-	{
-		printf("This file hasn't been compressed by this program\n");
-		return;
-	}
-
-	fread(buffer, 1, 1, infile);
-	if(fread(buffer, 1, 1, infile) == 1)
-	{
-		tmpSum = buffer[0];
-	}else{
-		return;
-	}
-	fseek(infile,4,SEEK_CUR);
-	while(fread(buffer, 1, 1, infile) == 1)
-	{
-		tmpSum = tmpSum ^ buffer[0];
-	}
-	fseek(infile, 4 ,SEEK_SET);
-	for(i=0; i<4; i++)
-	{
-		if(fread(buffer, 1, 1, infile) == 1)
-		{
-			tmpSum = tmpSum ^ buffer[0];
-		}
-	}
-	if(tmpSum == checkSum)
-	{
-		printf("The file is valid!\n");
-	}else{
-		printf("The file is corrupted\n");
-	}
 }

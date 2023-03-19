@@ -160,6 +160,33 @@ dictionary *addToDictionary(dictionary *dict, node *leaf)
 	return dict;
 }
 
+dictionary *addToReadDict(dictionary *dict, unsigned char symbol, int bitLength, char *code)
+{
+	if(dict == NULL)
+	{
+		dict = malloc(sizeof(dict));
+		dict->symbol = symbol;
+		dict->bitLength = bitLength;
+		dict->code = malloc( (bitLength+1) * sizeof(dict->code));
+		strcpy(dict->code, code);
+		dict->next = NULL;		
+	}else{
+		dictionary *tmp = malloc(sizeof(*tmp));
+		tmp->symbol = symbol;
+		tmp->bitLength = bitLength;
+		tmp->code = malloc( (bitLength+1) * sizeof(dict->code));
+		strcpy(tmp->code, code);
+		tmp->next = NULL;
+
+		dictionary *i;
+		for(i = dict; i->next != NULL; i=i->next)
+			;
+		i->next = tmp;
+	}
+	return dict;
+}
+
+
 void freeTree(node *currNode)
 {
 	if(currNode == NULL)

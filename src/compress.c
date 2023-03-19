@@ -47,7 +47,7 @@ void binWrite(dictionary *dict, unsigned char *bigbuffer ,FILE *outfile,int coun
 
 		int currSymbol = iter->symbol;
 		int currBitLength = iter->bitLength;
-		//if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+		//if(tempSize > 8)		* if its longer than a byte -> write to file and XOR written byte*
 		/*{
 			fwrite(&unionDict->Val.A,1,1,outfile);	
 			checksum=checksum^unionDict->Val.A;
@@ -85,7 +85,7 @@ void binWrite(dictionary *dict, unsigned char *bigbuffer ,FILE *outfile,int coun
 		/*unionDict->buf=unionDict->buf<<8;
 		unionDict->buf+=(short)iter->bitLength;
 		tempSize+=8;
-		*///if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+		*///if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*
 		/*{
 			fwrite(&unionDict->Val.A,1,1,outfile);	
 			checksum=checksum^unionDict->Val.A;
@@ -194,7 +194,7 @@ void binWrite(dictionary *dict, unsigned char *bigbuffer ,FILE *outfile,int coun
 	}else{				/* tempSize == 0 -> all bits of last byte of file are important*/
 		flag+=8;
 	}
-	//fseek(outfile,2,SEEK_SET);	/*write flag and checksum*/
+	//fseek(outfile,2,SEEK_SET);	/*write flag and checksum*
 	//fprintf(outfile,"%c",flag);
 	//fprintf(outfile,"%c",checksum);
 	fprintf(stderr, "thats a dictLength: %d\n", dictLength);
@@ -208,11 +208,11 @@ void binWrite(dictionary *dict, unsigned char *bigbuffer ,FILE *outfile,int coun
 
 	secondOldestChar = secondOldest>>16;				/*shifting bits to the right to make them fit into char*/
 	thirdOldestChar = thirdOldest>>8;
-	//fprintf(outfile, "%c", secondOldestChar);			/*writing them to file*/
+	//fprintf(outfile, "%c", secondOldestChar);			/*writing them to file*
 	//fprintf(outfile, "%c", thirdOldestChar);
 	//fprintf(outfile, "%c", fourthOldest);
 									
-	//fprintf(outfile, "%c", lastBitsOfDict);				/*writing the number of the oldest important bits in the last byte of dictionary*/
+	//fprintf(outfile, "%c", lastBitsOfDict);				/*writing the number of the oldest important bits in the last byte of dictionary*
 	
 	checksum = checksum ^ secondOldestChar;
 	checksum = checksum ^ thirdOldestChar;
