@@ -110,12 +110,12 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 	fread(dictBuffer, 1, dictLength, infile);
 
 	unsigned char currBuf = 0;
-	unsigned int neededToSymbol = 8;
-	unsigned int neededToBitLength = 8;
-	unsigned int neededToCode = 0;
-	unsigned char *currCode;
-	unsigned char oneOrZeroFlag = 0;
-	unsigned char currentCodeIndex = 0;
+	unsigned int neededToSymbol = 8;			/*while reading a symbol - how many more bits are needed to read the symbol*/
+	unsigned int neededToBitLength = 8;			/*while reading symbol's length - how many more bits are needed to read the bitLength*/
+	unsigned int neededToCode = 0;				/*while reading a code - how many more bits are needed to read the code - determined by bitLength*/
+	char *currCode;
+	unsigned char oneOrZeroFlag = 0;			
+	unsigned char currentCodeIndex = 0;		
        	int currZero = 0;	
 	for(i=0; i<dictLength; i++)
 	{
@@ -130,9 +130,9 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 		}
 		for(j=7; j>=currZero; j--)
 		{
-			int power = pow(2, j);
+			int power = pow(2, j);				/*checking if current bit is 1 or 0*/
 			unionRead->buf = unionRead->buf<<1;
-			if(currBuf >= power)
+			if(currBuf >= power)						
 			{
 				unionRead->buf += 1;
 				currBuf-=power;
@@ -166,7 +166,7 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 					neededToCode--;
 					currCode[currentCodeIndex] = oneOrZeroFlag;
 					currentCodeIndex++;
-					if(neededToCode == 0)
+					if(neededToCode == 0)			/*add to dictionary*/
 					{
 						currCode[currentCodeIndex] = '\0';
 						readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
@@ -179,11 +179,33 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 		}
 	}
 
-	dictionary *iter;
-	for(iter = readDict; iter != NULL; iter=iter->next)
+	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));		/*malloc'ing char for max length of dictionary code*/
+	int currentReadLength = 0;					
+	dictionary *currentEntry = NULL;
+	fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
+	while( fread(buffer, 1, 1, infile) == 1)
 	{
-		fprintf(stderr, "Jestem symbolem %c o wartości %d. To długość mojego kodu: %d i on sam: %s\n", iter->symbol, iter->symbol, iter->bitLength, iter->code);
+		currBuf = buffer[0];
+		for(j=7; j>=0; j--)									/*TODO: handle the last byte properly*/
+		{
+			int power = pow(2, j);
+			if(currBuf >= power)
+			{
+				currentReadCode[currentReadLength++] = '1';
+				currBuf-=power;
+			}else{
+				currentReadCode[currentReadLength++] = '0';
+			}
+			currentReadCode[currentReadLength] = '\0';
+			if( ( currentEntry = findMatchingCode(readDict, currentReadCode) ) != NULL )	/*find if the code exists in the dictionary*/
+			{
+				fprintf(outfile, "%c", currentEntry->symbol);
+				currentReadLength = 0;
+			}	
+		}
+	
 	}
+	free(currentReadCode);
 	free(unionRead);
 	free(dictBuffer);
 	freeDict(readDict);

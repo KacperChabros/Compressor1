@@ -186,6 +186,45 @@ dictionary *addToReadDict(dictionary *dict, unsigned char symbol, int bitLength,
 	return dict;
 }
 
+dictionary *findMatchingCode(dictionary *dict, char *code)
+{
+	if(dict == NULL)
+	{
+		return NULL;
+	}else{
+		dictionary *i;
+		for(i=dict; i!=NULL; i=i->next)
+		{
+			if( strcmp(i->code, code) == 0)
+			{
+				return i;
+			}
+		}
+		return NULL;
+	}
+
+}
+
+int findLongestCode(dictionary *dict)
+{
+	if(dict == NULL)
+	{
+		return 0;
+	}else{
+		dictionary *i;
+		int max = dict->bitLength;
+		for(i=dict; i!=NULL; i=i->next)
+		{
+			if(i->bitLength >= dict->bitLength)
+			{
+				max = i->bitLength;
+			}
+		}
+		return max;
+	}
+}
+
+
 
 void freeTree(node *currNode)
 {
