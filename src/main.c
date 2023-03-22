@@ -119,10 +119,10 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	bigbuffer=readfile(file1,infile, bigbuffer);
-	for(i=0; i<file1->counter; i++)
+	/*for(i=0; i<file1->counter; i++)
 	{
 		printf("Code of symbol: %d\n", bigbuffer[i]);
-	}
+	}*/
 	printf("------------------------------------");
 	charinfo1=frequency(file1,bigbuffer,charinfo1);
 	printf("file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 	{
 		printf("Symbol %d: %c and its frequency: %d\n", iter->value, iter->value, iter->freq);
 	}
-
+	if(decompress == false)
 	dict1 = makeDictionary(file1, charinfo1);
 	printf("distinct chars: %d\n", file1->distinctChars);
 	
@@ -144,36 +144,32 @@ int main(int argc, char **argv)
 	{
 		printf("Symbol no. %d: %c and its code %s and its size %d\n ", iterDictionary->symbol, iterDictionary->symbol, iterDictionary->code, iterDictionary->bitLength);
 	}
-	binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum);
+	if( decompress == false)
+		binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum);
 	printf("NAPISALEM BINARY\n");
 	fclose(outfile);
-	if(cypher==true)
+	if(cypher==true && compress==true)
 	{	
 			
-		outfile=fopen(argv[2],"rb");
-		fileInfo_t file2=malloc(sizeof(file2));
-        	file2->length=file1->length/2;
-       		file2->counter=0;
-        	file2->distinctChars=0;
-        	unsigned char *bigbuffer2 = malloc( file2->length * sizeof(*bigbuffer2));
-		bigbuffer2=readfile(file2,outfile,bigbuffer2);
-		fclose(outfile);	
-		outfile=fopen(argv[2],"wb");
-		xorcode(file2->counter,outfile,bigbuffer2,password);
-		/*fclose(outfile);
-		outfile=fopen(argv[2],"wb");
-		xorcode(file2->counter,outfile,bigbuffer2,password);*/
-		free(bigbuffer2);
-		free(file2);
+		xorcode(outfile,password,file1->length/2,argv[2]);
 		fclose(outfile);
+		/*THIS IS A TEST FOR IMMEDIATE DECODE*/
+
+		/*xorcode(outfile,password,file1->length/2,argv[2]);
+		fclose(outfile);*/
 	}
 	fclose(infile);
 	if(decompress==true)
-	{
+	{	
+		if(cypher==true){
+			xorcode(infile,password,file1->length,argv[1]);
+			fclose(infile);
+
+		}
 		infile=fopen(argv[1],"rb");
 		isValid(checksum, infile);
-		//fclose(infile);
 		decompressFile(infile, argv[2], checksum);
+		//fclose(infile);
 	}
 	//fclose(outfile);
 	free(bigbuffer);
