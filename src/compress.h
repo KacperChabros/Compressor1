@@ -13,6 +13,8 @@ typedef union data{
 		char B;
 	};*/
 }data_t;
-dictionary *findCode(dictionary *dict,unsigned char symbol);
-void binWrite(dictionary *dict, unsigned char *bigbuffer ,FILE *outfile,int counter,int compressLevel, bool cypher,unsigned char checksum);
+dictionary *findCode(dictionary *dict,unsigned short symbol); /*ZMIANY*/
+
+void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter, int compressLevel, bool cypher, unsigned char checksum, int lastBytesNotCompressed, unsigned char *notCompressedBytes); /*ZMIANY*/
+/*void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter,int compressLevel, bool cypher,unsigned char checksum);*/ /*ZMIANY*/
 #endif

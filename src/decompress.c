@@ -5,6 +5,7 @@
 #include "compress.h"
 #include <math.h>
 #include <string.h>
+#include <sys/stat.h>
 
 int isValid(unsigned char checkSum, FILE *infile)
 {
@@ -53,25 +54,40 @@ int isValid(unsigned char checkSum, FILE *infile)
 		/*printf("The file is corrupted\n");*/
 	}
 }
+void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
 
-void decompressFile(FILE *infile, char *outName, char checksum)
+void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
+
+void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
+
+
+void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
 {
 	FILE *outfile = fopen(outName, "wb");
+	struct stat stats;					/*to get file size*/
+	stat(inName, &stats);
+	unsigned long long int sizeOfFile = stats.st_size;
+	/*fprintf(stderr, "To rozmiar pliku: %lld w bajtach\n", sizeOfFile);*/
 	unsigned char buffer[1];
 	unsigned char *dictBuffer;
 	int i, j;
 	unsigned char compressLevelMask = 0b11000000;
 	unsigned char cypherMask = 0b00100000;
-	unsigned char lastBitsMask = 0b00011111;		/*think this through*/
-	
+	unsigned char lastBitsMask = 0b00011111;		/*think this through*/ 	/*of compressed file*/
+
+	unsigned char notCompressedBytesMask = 0b11000000;
+	unsigned char lastBitsOfDictMask = 0b00001111;
+
 	unsigned char compressLevel = 0;
 	unsigned char cypher = 0;
 	unsigned char lastBits = 0;
 
 	unsigned int dictLength = 0;
 	unsigned char lastBitsOfDict = 0;
+	unsigned char notCompressedBytes = 0;
 
-	unsigned char currSymbol = 0;
+	/*unsigned char currSymbol = 0;*/
+	unsigned short currSymbol = 0;
 	unsigned char currBitLength = 0;
 	int tempSize = 0;	
 	unsigned char status = 1; 				/* status defines whether we are looking for a symbol {1}, a bitLength {2} or a Code {3}
@@ -81,12 +97,13 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 	if( fread(buffer, 1, 1, infile) == 1 )
 	{
 		compressLevel = compressLevelMask & buffer[0];
+		compressLevel = compressLevel >> 6;
 		cypher = cypherMask & buffer[0];
 		lastBits = lastBitsMask & buffer[0];
 	}else{
 		return;
 	}
-	//fprintf(stderr, "Maskiii: CL: %d, Cyp: %d, lastBits: %d\n", compressLevel, cypher, lastBits);
+	fprintf(stderr, "Maskiii: CL: %d, Cyp: %d, lastBits: %d\n", compressLevel, cypher, lastBits);
 	fseek(infile, 1, SEEK_CUR);
 	for(i=0; i<3; i++)
 	{
@@ -96,21 +113,36 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 			dictLength += buffer[0];
 		}
 	}
-	//fprintf(stderr, "Długość słownika: %d\n", dictLength);
+	fprintf(stderr, "Długość słownika: %d\n", dictLength);
 	if( fread(buffer, 1, 1, infile) == 1)
 	{
-		lastBitsOfDict = buffer[0];
+		notCompressedBytes = notCompressedBytesMask & buffer[0];
+		notCompressedBytes = notCompressedBytes >> 6;
+		lastBitsOfDict = lastBitsOfDictMask & buffer[0];
 	}
-	//fprintf(stderr, "Ostatnie bity w słowniku: %d\n", lastBitsOfDict);
+	fprintf(stderr, "Ostatnie bity w słowniku: %d i nieskompresowanebajty: %d\n", lastBitsOfDict, notCompressedBytes);
 	
 	dictionary *readDict = NULL;
 	data_t *unionRead = malloc(sizeof(*unionRead));
 	dictBuffer = malloc( dictLength * sizeof(dictBuffer));
 	
 	fread(dictBuffer, 1, dictLength, infile);
+	
 
-	unsigned char currBuf = 0;
-	unsigned int neededToSymbol = 8;			/*while reading a symbol - how many more bits are needed to read the symbol*/
+	unsigned char currBuf = 0; 
+	unsigned int neededToSymbol = 0;			/*while reading a symbol - how many more bits are needed to read the symbol*/
+	switch(compressLevel)
+	{
+		case 1:
+			neededToSymbol = 8;
+			break;
+		case 2:
+			neededToSymbol = 12;
+			break;
+		case 3: 
+			neededToSymbol = 16;
+			break;
+	}
 	unsigned int neededToBitLength = 8;			/*while reading symbol's length - how many more bits are needed to read the bitLength*/
 	unsigned int neededToCode = 0;				/*while reading a code - how many more bits are needed to read the code - determined by bitLength*/
 	char *currCode;
@@ -144,12 +176,53 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 			{
 				case 1:
 					neededToSymbol--;
-					if(neededToSymbol == 0)
+					if(compressLevel == 1)
 					{
-						currSymbol = unionRead->Val.A;
-						status = 2;
-						neededToSymbol = 8;
-					}	
+						if(neededToSymbol == 0)
+						{
+							currSymbol = unionRead->Val.A;
+							status = 2;
+							neededToSymbol = 8;
+						}
+					}
+					else if(compressLevel == 2)
+					{
+						/*if(neededToSymbol == 4)
+						{
+							currSymbol = unionRead->Val.A;
+							currSymbol = currSymbol<<4;
+						}
+						else if(neededToSymbol == 0)
+						{
+							currSymbol += (unionRead->Val.A & 0b00001111);
+							status = 2;
+							neededToSymbol = 12;
+						}*/
+						if(neededToSymbol == 0)
+						{
+							currSymbol = 0;
+							currSymbol = unionRead->buf;
+							currSymbol = (currSymbol & 0b0000111111111111);
+							status = 2;
+							neededToSymbol = 12;
+						}
+					}
+					else if(compressLevel == 3)
+					{
+						if(neededToSymbol == 8)
+						{
+							currSymbol = unionRead->Val.A;
+							currSymbol = currSymbol<<8;
+							//fprintf(stderr, "jakies cyfry: %d\n", currSymbol);
+						}else if(neededToSymbol == 0)
+						{
+							currSymbol += unionRead->Val.A;
+							status = 2;
+
+							//fprintf(stderr, "jakies cyfry 2: %d\n", currSymbol);
+							neededToSymbol = 16;
+						}
+					}
 					break;
 				case 2:
 					neededToBitLength--;
@@ -171,22 +244,74 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 						currCode[currentCodeIndex] = '\0';
 						readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
 						status = 1;
-						currentCodeIndex = 0;						
+						currentCodeIndex = 0;
+						currSymbol = 0;				
 						free(currCode);
 					}
 					break;
 			}
 		}
 	}
+	/*dictionary *iterDict;
 
+	for(iterDict = readDict; iterDict != NULL; iterDict=iterDict->next)
+	{
+		fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", iterDict->symbol, iterDict->bitLength, iterDict->code);
+	}*/
 	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));		/*malloc'ing char for max length of dictionary code*/
+	
 	int currentReadLength = 0;					
 	dictionary *currentEntry = NULL;
 	fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
+	
+	currZero = 0;
+	i = 8 + dictLength;
+	/*tu były rzeczy*/
+	if(compressLevel == 1)
+	{
+		decompressL1(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
+	}
+	else if(compressLevel == 2)
+	{
+		decompressL2(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
+	}
+	else if(compressLevel == 3)
+	{
+		decompressL3(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
+	}
+	free(currentReadCode);
+	free(unionRead);
+	free(dictBuffer);
+	freeDict(readDict);
+}
+
+void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits) 
+{
+	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	int currentReadLength = 0;
+	dictionary *currentEntry = NULL;
+	int currZero = 0;
+	int i = 8 + dictLength;
+	int j;
+	unsigned char buffer[1];
+	unsigned char currBuf = 0;
+	struct stat stats;					/*to get file size*/
+	stat(inName, &stats);
+	unsigned long long int sizeOfFile = stats.st_size;
+
 	while( fread(buffer, 1, 1, infile) == 1)
 	{
 		currBuf = buffer[0];
-		for(j=7; j>=0; j--)									/*TODO: handle the last byte properly*/
+
+		if(i==(sizeOfFile - notCompressedBytes - 1))				/*determines how many oldest bits of the last byte should be read*/
+		{
+			currZero += (8 - lastBits);
+		}
+		else
+		{
+			currZero = 0;
+		}
+		for(j=7; j>=currZero; j--)									
 		{
 			int power = pow(2, j);
 			if(currBuf >= power)
@@ -203,10 +328,174 @@ void decompressFile(FILE *infile, char *outName, char checksum)
 				currentReadLength = 0;
 			}	
 		}
-	
+		i++;
 	}
-	free(currentReadCode);
-	free(unionRead);
-	free(dictBuffer);
-	freeDict(readDict);
+	if(notCompressedBytes > 0 )
+	{
+		for(i=0; i<notCompressedBytes; i++)
+		{
+			fread(buffer, 1, 1, infile);
+			fprintf(outfile, "%c", buffer[0]);
+		}
+	}
+
+}
+
+void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits)
+{
+	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	int currentReadLength = 0;
+	dictionary *currentEntry = NULL;
+	int currZero = 0;
+	int i = 8 + dictLength;
+	int j;
+	unsigned char buffer[1];
+	unsigned char currBuf = 0;
+	struct stat stats;					/*to get file size*/
+	stat(inName, &stats);
+	unsigned long long int sizeOfFile = stats.st_size;
+	unsigned char halfChar = 0;
+	int written = 0;
+	int breakFlag = 0;
+	while( fread(buffer, 1, 1, infile) == 1)
+	{
+		currBuf = buffer[0];
+
+		if( i==(sizeOfFile - notCompressedBytes - 1))				/*determines how many oldest bits of the last byte should be read*/
+		{
+			currZero += (8 - lastBits);
+			if(lastBits == 8)
+				breakFlag = 1;
+		}
+		else
+		{
+			currZero = 0;
+		}
+		for(j=7; j>=currZero; j--)
+		{
+			int power = pow(2, j);
+			if(currBuf >= power)
+			{
+				currentReadCode[currentReadLength++] = '1';
+				currBuf-=power;
+			}else{
+				currentReadCode[currentReadLength++] = '0';
+			}
+			currentReadCode[currentReadLength] = '\0';
+			
+			if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			{
+				
+				unsigned short symbol = currentEntry->symbol;
+				unsigned char fullChar = 0;
+				written++;
+				if(written % 2 != 0)
+				{
+					halfChar += (symbol & 0b0000000000001111);
+					halfChar = halfChar<<4;
+					symbol = symbol >> 4;
+					fullChar += symbol;
+					fprintf(outfile, "%c", fullChar);
+				}
+				else
+				{
+					fullChar += (symbol & 0b0000000011111111);
+					symbol = symbol >> 8;
+					halfChar += symbol;
+					fprintf(outfile, "%c", halfChar);
+					fprintf(outfile, "%c", fullChar);
+					halfChar = 0;
+				}
+				currentReadLength = 0;
+			}
+		}
+		i++;
+		if(currZero != 0 || breakFlag == 1)
+		{
+			break;
+		}
+	}
+
+	if(notCompressedBytes > 0 )
+	{
+		for(i=0; i<notCompressedBytes; i++)
+		{
+			fread(buffer, 1, 1, infile);
+			fprintf(outfile, "%c", buffer[0]);
+		}
+	}
+
+}
+
+void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits)
+{
+	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	int currentReadLength = 0;
+	dictionary *currentEntry = NULL;
+	int currZero = 0;
+	int i = 8 + dictLength;
+	int j;
+	unsigned char buffer[1];
+	unsigned char currBuf = 0;
+	struct stat stats;					/*to get file size*/
+	stat(inName, &stats);
+	unsigned long long int sizeOfFile = stats.st_size;
+	int breakFlag = 0;
+	
+	while( fread(buffer, 1, 1, infile) == 1)
+	{
+		currBuf = buffer[0];
+
+		if(i==(sizeOfFile - notCompressedBytes - 1))				/*determines how many oldest bits of the last byte should be read*/
+		{
+			currZero += (8 - lastBits);
+			if(lastBits == 8)
+				breakFlag = 1;
+		}
+		else
+		{
+			currZero = 0;
+		}
+		for(j=7; j>=currZero; j--)
+		{
+			int power = pow(2, j);
+			if(currBuf >= power)
+			{
+				currentReadCode[currentReadLength++] = '1';
+				currBuf-=power;
+			}else{
+				currentReadCode[currentReadLength++] = '0';
+			}
+			currentReadCode[currentReadLength] = '\0';
+			
+			if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			{
+				unsigned short symbol = 0;
+				unsigned char secondHalf = 0;
+				unsigned char firstHalf = 0;
+				symbol = currentEntry->symbol;
+				secondHalf = (symbol & 0b0000000011111111);
+				symbol = symbol >> 8;
+				firstHalf = (symbol & 0b0000000011111111);
+				fprintf(outfile, "%c", firstHalf);
+				fprintf(outfile, "%c", secondHalf);
+				currentReadLength = 0;
+			}
+		}
+		i++;
+		if(currZero != 0 || breakFlag == 1)
+		{
+			break;
+		}
+	}	
+
+	if(notCompressedBytes > 0 )
+	{
+		for(i=0; i<notCompressedBytes; i++)
+		{
+			fread(buffer, 1, 1, infile);
+			fprintf(outfile, "%c", buffer[0]);
+		}
+	}
+
 }

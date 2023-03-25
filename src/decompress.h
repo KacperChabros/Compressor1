@@ -4,6 +4,6 @@
 int isValid(unsigned char checkSum, FILE *infile);
 
 
-void decompressFile(FILE *infile, char *outName, char checksum);
+void decompressFile(FILE *infile, char *inName, char *outName, char checksum);
 
 #endif

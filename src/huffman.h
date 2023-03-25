@@ -17,7 +17,7 @@ typedef struct priorityQ{
 } priorityQ;
 
 typedef struct dictionary{
-	unsigned char symbol;
+	unsigned short symbol;			/*ZMIANY*/
 	int bitLength;
 	char *code;
 	struct dictionary *next;
@@ -27,7 +27,7 @@ typedef struct dictionary{
 
 dictionary *makeDictionary(fileInfo_t file1, charInfo *charInfo1);
 
-dictionary *addToReadDict(dictionary *dict, unsigned char symbol, int bitLength, char *code);
+dictionary *addToReadDict(dictionary *dict, unsigned short symbol, int bitLength, char *code); /*ZMIANY*/
 
 int findLongestCode(dictionary *dict);
 

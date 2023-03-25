@@ -160,7 +160,7 @@ dictionary *addToDictionary(dictionary *dict, node *leaf)
 	return dict;
 }
 
-dictionary *addToReadDict(dictionary *dict, unsigned char symbol, int bitLength, char *code)
+dictionary *addToReadDict(dictionary *dict, unsigned short symbol, int bitLength, char *code) /*ZMIANY*/
 {
 	if(dict == NULL)
 	{
@@ -288,23 +288,38 @@ dictionary *makeDictionary(fileInfo_t file1, charInfo *charInfo1)
 	}
 	qsort(nodes, file1->distinctChars, sizeof(node*), cmp);		/*sorting the nodes in ascending order*/
 	
+	
 	priorityQ *prior1 = NULL;
 	for(i=0; i<file1->distinctChars; i++)
 	{
 		prior1 = enqueue(prior1, nodes[i], &queuedItems);
 	}
-
+	/*priorityQ *p1;
+	for(p1=prior1; p1!=NULL; p1=p1->next)
+	{
+		fprintf(stderr, "symbol: %d i ilość: %d\n", p1->Qnode->value, p1->Qnode->freq); 
+	}*/	
 	while(queuedItems > 1)						/*making a tree*/
 	{
 		prior1 = pop(prior1, &queuedItems);
 	}
-	qsort(nodes, file1->distinctChars, sizeof(node*), rcmp);	
+	qsort(nodes, file1->distinctChars, sizeof(node*), rcmp);
+	
+	
 	dictionary *dict1 = NULL;
-
+	
 	for(i=0; i<file1->distinctChars; i++)				/*creating a dictionary*/
 	{
 		dict1 = addToDictionary(dict1, nodes[i]);
 	}
+	
+	/*dictionary *d1;
+	for(d1=dict1; d1!=NULL; d1=d1->next)
+	{
+
+		fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", d1->symbol, d1->bitLength, d1->code);
+	}
+	fprintf(stderr, "-------\n");*/
 	freeTree(prior1->Qnode);
 	free(prior1);
 	return dict1;

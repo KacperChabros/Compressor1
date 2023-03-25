@@ -38,7 +38,16 @@ int main(int argc, char **argv)
 	/*file1->character=NULL;*/
 	
 	/*file1->bigbuffer=malloc(file1->length * sizeof(file1->bigbuffer));*/
-	unsigned char *bigbuffer = malloc( file1->length * sizeof(*bigbuffer));
+	unsigned short *bigbuffer = malloc( file1->length * sizeof(*bigbuffer)); /*zmiany*/
+	
+	int lastBytesNotCompressed = 0;						/*defines how many last bytes of infile are not compressed
+										  * 1st compression level - 0
+										  * 2nd compression level - 0, 1 or 2 bytes
+										  * 3rd compression level - 0 or 1 byte
+										  */
+
+	unsigned char *notCompressedBytes = malloc( 2 * sizeof(*notCompressedBytes)); 	/*buffer to store those not compressed bytes*/
+
 
 	dictionary *dict1 = NULL;
 	if(argc<3)
@@ -118,47 +127,62 @@ int main(int argc, char **argv)
 		free(bigbuffer);
 		return 2;
 	}
-	bigbuffer=readfile(file1,infile, bigbuffer);
-	/*for(i=0; i<file1->counter; i++)
+	bigbuffer=readfile(file1,infile, bigbuffer, compresslevel, &lastBytesNotCompressed, notCompressedBytes); /*ZMIANY*/
+	for(i=0; i<file1->counter; i++)
 	{
 		printf("Code of symbol: %d\n", bigbuffer[i]);
-	}*/
-	printf("------------------------------------");
+	}
+	if( lastBytesNotCompressed > 0 )
+	{
+		int k;
+		for( k=0; k<lastBytesNotCompressed; k++)
+		{
+			fprintf(stderr, "Nieskompresowany bajt: %c, %d\n", notCompressedBytes[k], notCompressedBytes[k]);
+		}
+	}
+	printf("------------------------------------\n");
 	charinfo1=frequency(file1,bigbuffer,charinfo1);
 	printf("file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
+	
 	/*for(i=0; i<file1->counter; i++)
 	{
 		fwrite( (bigbuffer+i), 1, 1, outfile);
 	}*/
-	charInfo *iter;
+	
+	/*charInfo *iter;
 	for(iter = charinfo1; iter != NULL; iter=iter->next)
 	{
 		printf("Symbol %d: %c and its frequency: %d\n", iter->value, iter->value, iter->freq);
-	}
-	if(decompress == false)
-	dict1 = makeDictionary(file1, charinfo1);
+	}*/
+
+
 	printf("distinct chars: %d\n", file1->distinctChars);
+	dict1 = makeDictionary(file1, charinfo1);
 	
-	dictionary *iterDictionary;
+
+	/*dictionary *iterDictionary;
 	for(iterDictionary = dict1; iterDictionary != NULL; iterDictionary=iterDictionary->next)
 	{
 		printf("Symbol no. %d: %c and its code %s and its size %d\n ", iterDictionary->symbol, iterDictionary->symbol, iterDictionary->code, iterDictionary->bitLength);
-	}
-	if( decompress == false)
-		binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum);
+	}*/
+	
+	binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum,lastBytesNotCompressed,notCompressedBytes);
 	printf("NAPISALEM BINARY\n");
 	fclose(outfile);
-	if(cypher==true && compress==true)
+	
+	if(cypher==true && compress==true)			/*TRZEBA BĘDZIE POPRAWIĆ*/
 	{	
 			
 		xorcode(outfile,password,file1->length/2,argv[2]);
 		fclose(outfile);
+		
 		/*THIS IS A TEST FOR IMMEDIATE DECODE*/
 
 		/*xorcode(outfile,password,file1->length/2,argv[2]);
 		fclose(outfile);*/
 	}
 	fclose(infile);
+	//return 0;
 	if(decompress==true)
 	{	
 		if(cypher==true){
@@ -168,7 +192,7 @@ int main(int argc, char **argv)
 		}
 		infile=fopen(argv[1],"rb");
 		isValid(checksum, infile);
-		decompressFile(infile, argv[2], checksum);
+		decompressFile(infile, argv[1], argv[2], checksum);
 		//fclose(infile);
 	}
 	//fclose(outfile);
