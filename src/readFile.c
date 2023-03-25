@@ -1,14 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "readFile.h"
-
-
-/*ZMIANY*/
 unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer, int compresslevel, int *lastBytesNotCompressed, unsigned char *notCompressedBytes)
 {
 	unsigned char buffer[2];
 	
-	if( compresslevel == 1)
+	if( compresslevel == 1||compresslevel==0)
 	{
 		while(fread(buffer,1,1,infile)==1)
 		{
@@ -19,7 +16,6 @@ unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer
 			}
 			bigbuffer[file->counter] = buffer[0];
 			file->counter++;
-			/*file->character=addcharInfo(file->character,buffer[0],&(file->distinctChars));*/
 		}
 	}
 	else if( compresslevel == 2 )
@@ -107,18 +103,6 @@ charInfo *frequency(fileInfo_t file, unsigned short *bigbuffer, charInfo *charin
 	}
 	return charinfo1;
 }
-/*unsigned char *doubleSize(unsigned char *bigbuffer,int *length)
-{
-	int i;
-	*length*=2;
-	char *tmp = malloc( *length * sizeof(*tmp));
-	for(i=0; i<(*length / 2); i++)
-	{
-		*(tmp+i) = *(bigbuffer+i);
-	}
-	bigbuffer=realloc(bigbuffer,*length*sizeof(bigbuffer));
-	return bigbuffer;
-}*/
 charInfo *addcharInfo(charInfo *info,unsigned short buffer, int *distinctChars) 	/*ZMIANY*/
 {
 	if(info==NULL)

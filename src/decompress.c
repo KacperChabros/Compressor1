@@ -6,31 +6,21 @@
 #include <math.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 
 int isValid(unsigned char checkSum, FILE *infile)
 {
 	int i;
 	unsigned char buffer[1];
 	unsigned char tmpSum;
-	fread(buffer, 1, 1, infile);
-	if(buffer[0] != 'S')
-	{
-		printf("This file hasn't been compressed by this program\n");
-		return 5;
-	}
-	fread(buffer, 1, 1, infile);
-	if(buffer[0] != 'K')
-	{
-		printf("This file hasn't been compressed by this program\n");
-		return 5;
-	}
-
-	fread(buffer, 1, 1, infile);
+	fseek(infile, 3, SEEK_SET);
+	//fread(buffer, 1, 1, infile);
 	if(fread(buffer, 1, 1, infile) == 1)
 	{
 		tmpSum = buffer[0];
 	}else{
-		return 4;
+		fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+		return 5;
 	}
 	fseek(infile,4,SEEK_CUR);
 	while(fread(buffer, 1, 1, infile) == 1)
@@ -45,13 +35,14 @@ int isValid(unsigned char checkSum, FILE *infile)
 			tmpSum = tmpSum ^ buffer[0];
 		}
 	}
+	fprintf(stderr,"tmpSum:%d | checkSum: %d\n",tmpSum,checkSum);
 	if(tmpSum == checkSum)
 	{
-		/*printf("The file is valid!\n");*/
+		fprintf(stderr,"The file is valid!\n");
 		return 0;
 	}else{
-		return 4;
-		/*printf("The file is corrupted\n");*/
+		printf("The file is corrupted\n");
+		return 6;
 	}
 }
 void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
@@ -61,12 +52,13 @@ void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
 
 
-void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
+int decompressFile(FILE *infile, char *inName, char *outName, char checksum, bool info)
 {
 	FILE *outfile = fopen(outName, "wb");
 	struct stat stats;					/*to get file size*/
 	stat(inName, &stats);
 	unsigned long long int sizeOfFile = stats.st_size;
+	int isCorrupted = 0;
 	/*fprintf(stderr, "To rozmiar pliku: %lld w bajtach\n", sizeOfFile);*/
 	unsigned char buffer[1];
 	unsigned char *dictBuffer;
@@ -93,7 +85,35 @@ void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
 	unsigned char status = 1; 				/* status defines whether we are looking for a symbol {1}, a bitLength {2} or a Code {3}
 								   to make a dictionary*/
 	/*call isValid*/
-	fseek(infile, 2, SEEK_SET);
+	//fseek(infile, 2, SEEK_SET);
+	fseek(infile, 0, SEEK_SET);
+	if( fread(buffer, 1, 1, infile) == 1)
+	{
+		if(buffer[0] != 'S')
+		{
+			fprintf(stderr,"This file hasn't been compressed by this program and has already been decompressed\n");
+			return 4;
+		}
+	}
+	else
+	{
+		fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+		return 5;
+	}
+	if( fread(buffer, 1, 1, infile) == 1)
+	{
+		if(buffer[0] != 'K')
+		{
+			fprintf(stderr,"This file hasn't been compressed by this program or has already been decompressed\n");
+			return 4; 
+		}
+	}
+	else
+	{
+		fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+		return 5;
+	}
+
 	if( fread(buffer, 1, 1, infile) == 1 )
 	{
 		compressLevel = compressLevelMask & buffer[0];
@@ -101,10 +121,17 @@ void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
 		cypher = cypherMask & buffer[0];
 		lastBits = lastBitsMask & buffer[0];
 	}else{
-		return;
+
+		fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+		return 5;
 	}
-	fprintf(stderr, "Maskiii: CL: %d, Cyp: %d, lastBits: %d\n", compressLevel, cypher, lastBits);
-	fseek(infile, 1, SEEK_CUR);
+	if(info == true)
+		fprintf(stderr,"Read Masks:\nCompressLevel: %d, isCyphered: %d, no. important bits of last compressed byte: %d\n", compressLevel, cypher, lastBits);
+	/*call isValid*/
+	if( (isCorrupted = isValid(checksum, infile) != 0))
+		return isCorrupted;
+	//fprintf(stderr,"JESTEM\n");
+	fseek(infile,4, SEEK_SET);
 	for(i=0; i<3; i++)
 	{
 		if( fread(buffer, 1, 1, infile) == 1)
@@ -112,16 +139,28 @@ void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
 			dictLength = dictLength<<8;
 			dictLength += buffer[0];
 		}
+		else{
+			fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+			return 5;
+		}
 	}
-	fprintf(stderr, "Długość słownika: %d\n", dictLength);
+	if(info == true)
+		fprintf(stderr, "Length of dictionary in bytes: %d\n", dictLength);
 	if( fread(buffer, 1, 1, infile) == 1)
 	{
 		notCompressedBytes = notCompressedBytesMask & buffer[0];
 		notCompressedBytes = notCompressedBytes >> 6;
 		lastBitsOfDict = lastBitsOfDictMask & buffer[0];
 	}
-	fprintf(stderr, "Ostatnie bity w słowniku: %d i nieskompresowanebajty: %d\n", lastBitsOfDict, notCompressedBytes);
+	else{
+			fprintf(stderr, "A problem with reading header of compressed file occurred\n");
+			return 5;
+	}
+	if(info == true)
+		fprintf(stderr, "No. of  important bits of the lastbyte in dictionary: %d\n and no. of not compressed bytes: %d\n", lastBitsOfDict, notCompressedBytes);
 	
+	if( compressLevel != 0)
+	{
 	dictionary *readDict = NULL;
 	data_t *unionRead = malloc(sizeof(*unionRead));
 	dictBuffer = malloc( dictLength * sizeof(dictBuffer));
@@ -283,6 +322,18 @@ void decompressFile(FILE *infile, char *inName, char *outName, char checksum)
 	free(unionRead);
 	free(dictBuffer);
 	freeDict(readDict);
+	}/*KONIEC IFA Z CL!=0*/
+	else{
+		fseek(infile, 8, SEEK_SET);
+		while((fread(buffer,1,1,infile)==1))
+		{
+			fwrite(buffer,1,1,outfile);
+		}
+		
+	}
+	fclose(infile);
+	fclose(outfile);
+	return 0;
 }
 
 void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits) 
