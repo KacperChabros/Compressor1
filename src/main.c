@@ -6,6 +6,7 @@
 #include "compress.h"
 #include "cypher.h"
 #include "decompress.h"
+#include <time.h>
 void showHelp()
 {
 	printf("Prawidłowe wywołanie: ./prog <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
@@ -188,37 +189,38 @@ int main(int argc, char **argv)
 		binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum,lastBytesNotCompressed,notCompressedBytes,info);
 	}
 	fclose(outfile);
-	if(cypher==true && compress==true)			/*TRZEBA BĘDZIE POPRAWIĆ*/
+	if(cypher==true && compress==true)			
 	{	
 			
 		xorcode(outfile,password,file1->length/2,argv[2]);
 		fclose(outfile);
-		
-		/*THIS IS A TEST FOR IMMEDIATE DECODE*/
-
-		/*xorcode(outfile,password,file1->length/2,argv[2]);
-		fclose(outfile);*/
 	}
 	fclose(infile);
 	if(decompress==true)
 	{	
-		if(cypher==true){
-			xorcode(infile,password,file1->length,argv[1]);
-			fclose(infile);
-
-		}
 		int returnCode = 0;
-		infile=fopen(argv[1],"rb");
-		/*isValid(checksum, infile);*/
+		if(cypher==true){
+			time_t t;
+			time(&t);
+			char *tmpname=ctime(&t);
+			if((xorfile(infile,password,file1->length,argv[1],checksum,tmpname)==6))
+					return 6;
+			infile=fopen(tmpname,"rb");
+			returnCode = decompressFile(infile, tmpname, argv[2], checksum, info);
+			remove(tmpname);
+		}
+		else{
+			infile=fopen(argv[1],"rb");
 
-		returnCode = decompressFile(infile, argv[1], argv[2], checksum, info);
+			returnCode = decompressFile(infile, argv[1], argv[2], checksum, info);
+			
+		}
 		if(returnCode != 0)
 		{
 			/*freejowanie*/
 			return returnCode;	
 		}
 	}
-	//fclose(outfile);
 	free(bigbuffer);
 	free(file1);
 	freecharInfo(charinfo1);
