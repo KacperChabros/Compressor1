@@ -164,11 +164,6 @@ int main(int argc, char **argv)
 		charinfo1=frequency(file1,bigbuffer,charinfo1);
 		if(info==true){
 			fprintf(stderr,"file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
-	/*for(i=0; i<file1->counter; i++)
-	{
-		fwrite( (bigbuffer+i), 1, 1, outfile);
-	}*/
-		
 			charInfo *iter;
 			for(iter = charinfo1; iter != NULL; iter=iter->next)
 			{
@@ -192,7 +187,7 @@ int main(int argc, char **argv)
 	if(cypher==true && compress==true)			
 	{	
 			
-		xorcode(outfile,password,file1->length/2,argv[2]);
+		xorcode(outfile,password,file1->length/2,argv[2],compresslevel);
 		fclose(outfile);
 	}
 	fclose(infile);

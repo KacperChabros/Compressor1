@@ -35,7 +35,7 @@ int isValid(unsigned char checkSum, FILE *infile)
 			tmpSum = tmpSum ^ buffer[0];
 		}
 	}
-	fprintf(stderr,"tmpSum:%d | checkSum: %d\n",tmpSum,checkSum);
+	//fprintf(stderr,"tmpSum:%d | checkSum: %d\n",tmpSum,checkSum);
 	if(tmpSum == checkSum)
 	{
 		fprintf(stderr,"The file is valid!\n");
