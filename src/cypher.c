@@ -62,6 +62,7 @@ void xorcode(FILE *outfile,char *key,int length, char *file,int compresslevel) /
 			fwrite((bigbuffer+i),1,1,outfile);
 		}
 	}
+	fclose(outfile);
 	free(bigbuffer);	
 }
 int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksum,char *tmpname) /*Overwrites FILE using XOR with the given key*/

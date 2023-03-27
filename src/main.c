@@ -33,15 +33,17 @@ int main(int argc, char **argv)
 	char *password=NULL;
 	int i,j;
 	unsigned char checksum=0b10001001;
-	fileInfo_t file1=malloc(sizeof(file1));
+	fileInfo_t file1;
+	unsigned short *bigbuffer;
+	/*fileInfo_t file1=malloc(sizeof(file1));
 	file1->length=1000;
 	file1->counter=0;
-	file1->distinctChars=0;
+	file1->distinctChars=0;*/
 	charInfo *charinfo1=NULL;
 	/*file1->character=NULL;*/
 	
 	/*file1->bigbuffer=malloc(file1->length * sizeof(file1->bigbuffer));*/
-	unsigned short *bigbuffer = malloc( file1->length * sizeof(*bigbuffer)); /*zmiany*/
+	/*unsigned short *bigbuffer = malloc( file1->length * sizeof(*bigbuffer));*/ /*zmiany*/
 	
 	int lastBytesNotCompressed = 0;						/*defines how many last bytes of infile are not compressed
 										  * 1st compression level - 0
@@ -49,7 +51,7 @@ int main(int argc, char **argv)
 										  * 3rd compression level - 0 or 1 byte
 										  */
 
-	unsigned char *notCompressedBytes = malloc( 2 * sizeof(*notCompressedBytes)); 	/*buffer to store those not compressed bytes*/
+	unsigned char *notCompressedBytes; 	/*buffer to store those not compressed bytes*/
 
 
 	dictionary *dict1 = NULL;
@@ -130,19 +132,45 @@ int main(int argc, char **argv)
 	}
 	infile=fopen(argv[1],"rb");
 	outfile=fopen(argv[2],"wb");
-	if(infile==NULL || outfile==NULL)
+	if(infile==NULL && outfile == NULL)
 	{
 		fprintf(stderr,"A problem occurred with opening files\n");
-		free(file1);
-		free(bigbuffer);
+		fclose(infile);
+		fclose(outfile);
 		return 2;
 	}
+	else if(infile == NULL)
+	{
+		fprintf(stderr,"A problem occurred with opening first file\n");
+		fclose(outfile);
+		return 2;
+
+	}
+	else if(outfile == NULL)
+	{
+		fprintf(stderr,"A problem occurred with opening second file\n");
+		fclose(infile);
+		return 2;
+	}
+
+	file1=malloc(sizeof(file1));
+	file1->length=1000;
+	file1->counter=0;
+	file1->distinctChars=0;
+	bigbuffer = malloc( file1->length * sizeof(bigbuffer)); 
+	notCompressedBytes = malloc( 2 * sizeof(notCompressedBytes)); 
+
 	if(compress==true)
 	{
 		bigbuffer=readfile(file1,infile, bigbuffer, compresslevel, &lastBytesNotCompressed, notCompressedBytes);
 		if(file1->counter==0)
 		{
 			fprintf(stderr,"File is empty\n");
+			free(file1);
+			free(bigbuffer);
+			free(notCompressedBytes);
+			fclose(infile);
+			fclose(outfile);
 			return 3;
 		}
 		if(info==true){
@@ -161,25 +189,25 @@ int main(int argc, char **argv)
 		}
 		if(compresslevel!=0)
 		{
-		charinfo1=frequency(file1,bigbuffer,charinfo1);
-		if(info==true){
-			fprintf(stderr,"file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
-			charInfo *iter;
-			for(iter = charinfo1; iter != NULL; iter=iter->next)
-			{
-				fprintf(stderr,"Symbol no.%d and its frequency: %d\n", iter->value, iter->freq);
+			charinfo1=frequency(file1,bigbuffer,charinfo1);
+			if(info==true){
+				fprintf(stderr,"file1->length: %d | file1->counter: %d \n",file1->length,file1->counter);
+				charInfo *iter;
+				for(iter = charinfo1; iter != NULL; iter=iter->next)
+				{
+					printf("Symbol no.%d and its frequency: %d\n", iter->value, iter->freq);
+				}
+				fprintf(stderr,"Distinct chars in file: %d\n", file1->distinctChars);
 			}
-			fprintf(stderr,"Distinct chars in file: %d\n", file1->distinctChars);
-		}
-		dict1 = makeDictionary(file1, charinfo1);
+			dict1 = makeDictionary(file1, charinfo1);
 	
-		if(info==true){
-			dictionary *iterDictionary;
-			for(iterDictionary = dict1; iterDictionary != NULL; iterDictionary=iterDictionary->next)
-			{
-				fprintf(stderr,"Symbol no. %d and its code %s and its size %d\n ", iterDictionary->symbol, iterDictionary->code, iterDictionary->bitLength);
+			if(info==true){
+				dictionary *iterDictionary;
+				for(iterDictionary = dict1; iterDictionary != NULL; iterDictionary=iterDictionary->next)
+				{
+					printf("Symbol no. %d and its code %s and its size %d\n ", iterDictionary->symbol, iterDictionary->code, iterDictionary->bitLength);
+				}
 			}
-		}
 		}
 		binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum,lastBytesNotCompressed,notCompressedBytes,info);
 	}
@@ -188,7 +216,7 @@ int main(int argc, char **argv)
 	{	
 			
 		xorcode(outfile,password,file1->length/2,argv[2],compresslevel);
-		fclose(outfile);
+		//fclose(outfile);
 	}
 	fclose(infile);
 	if(decompress==true)
@@ -199,7 +227,12 @@ int main(int argc, char **argv)
 			time(&t);
 			char *tmpname=ctime(&t);
 			if((xorfile(infile,password,file1->length,argv[1],checksum,tmpname)==6))
-					return 6;
+			{
+				free(file1);
+				free(bigbuffer);
+				free(notCompressedBytes);
+				return 6;
+			}
 			infile=fopen(tmpname,"rb");
 			returnCode = decompressFile(infile, tmpname, argv[2], checksum, info);
 			remove(tmpname);
@@ -212,12 +245,15 @@ int main(int argc, char **argv)
 		}
 		if(returnCode != 0)
 		{
-			/*freejowanie*/
+			free(file1);
+			free(bigbuffer);
+			free(notCompressedBytes);
 			return returnCode;	
 		}
 	}
 	free(bigbuffer);
 	free(file1);
+	free(notCompressedBytes);
 	freecharInfo(charinfo1);
 	freeDict(dict1);
 	return 0;

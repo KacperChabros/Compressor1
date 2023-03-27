@@ -3,6 +3,7 @@
 #include "decompress.h"
 #include "huffman.h"
 #include "compress.h"
+#include "trie.h"
 #include <math.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -45,11 +46,11 @@ int isValid(unsigned char checkSum, FILE *infile)
 		return 6;
 	}
 }
-void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
-void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
-void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
 
 int decompressFile(FILE *infile, char *inName, char *outName, char checksum, bool info)
@@ -161,167 +162,168 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	
 	if( compressLevel != 0)
 	{
-	dictionary *readDict = NULL;
-	data_t *unionRead = malloc(sizeof(*unionRead));
-	dictBuffer = malloc( dictLength * sizeof(dictBuffer));
+		dictionary *readDict = NULL;
+		data_t *unionRead = malloc(sizeof(*unionRead));
+		dictBuffer = malloc( dictLength * sizeof(dictBuffer));
 	
-	fread(dictBuffer, 1, dictLength, infile);
+		fread(dictBuffer, 1, dictLength, infile);
 	
 
-	unsigned char currBuf = 0; 
-	unsigned int neededToSymbol = 0;			/*while reading a symbol - how many more bits are needed to read the symbol*/
-	switch(compressLevel)
-	{
-		case 1:
-			neededToSymbol = 8;
-			break;
-		case 2:
-			neededToSymbol = 12;
-			break;
-		case 3: 
-			neededToSymbol = 16;
-			break;
-	}
-	unsigned int neededToBitLength = 8;			/*while reading symbol's length - how many more bits are needed to read the bitLength*/
-	unsigned int neededToCode = 0;				/*while reading a code - how many more bits are needed to read the code - determined by bitLength*/
-	char *currCode;
-	unsigned char oneOrZeroFlag = 0;			
-	unsigned char currentCodeIndex = 0;		
-       	int currZero = 0;	
-	for(i=0; i<dictLength; i++)
-	{
-		currBuf = dictBuffer[i];
-		if(i==(dictLength-1))				/*determines how many oldest bits of the last byte should be read*/
+		unsigned char currBuf = 0; 
+		unsigned int neededToSymbol = 0;			/*while reading a symbol - how many more bits are needed to read the symbol*/
+		switch(compressLevel)
 		{
-			currZero += (8 - lastBitsOfDict);
+			case 1:
+				neededToSymbol = 8;
+				break;
+			case 2:
+				neededToSymbol = 12;
+				break;
+			case 3: 
+				neededToSymbol = 16;
+				break;
 		}
-		else
+		unsigned int neededToBitLength = 8;			/*while reading symbol's length - how many more bits are needed to read the bitLength*/
+		unsigned int neededToCode = 0;				/*while reading a code - how many more bits are needed to read the code 
+									  - determined by bitLength*/
+		char *currCode;
+		unsigned char oneOrZeroFlag = 0;			
+		unsigned char currentCodeIndex = 0;		
+       		int currZero = 0;	
+		for(i=0; i<dictLength; i++)
 		{
-			currZero = 0;
-		}
-		for(j=7; j>=currZero; j--)
-		{
-			int power = pow(2, j);				/*checking if current bit is 1 or 0*/
-			unionRead->buf = unionRead->buf<<1;
-			if(currBuf >= power)						
+			currBuf = dictBuffer[i];
+			if(i==(dictLength-1))				/*determines how many oldest bits of the last byte should be read*/
 			{
-				unionRead->buf += 1;
-				currBuf-=power;
-				oneOrZeroFlag = '1';
-			}else{
-				oneOrZeroFlag = '0';
+				currZero += (8 - lastBitsOfDict);
 			}
-			switch(status)
+			else
 			{
-				case 1:
-					neededToSymbol--;
-					if(compressLevel == 1)
-					{
-						if(neededToSymbol == 0)
+				currZero = 0;
+			}
+			for(j=7; j>=currZero; j--)
+			{
+				int power = pow(2, j);				/*checking if current bit is 1 or 0*/
+				unionRead->buf = unionRead->buf<<1;
+				if(currBuf >= power)						
+				{
+					unionRead->buf += 1;
+					currBuf-=power;
+					oneOrZeroFlag = '1';
+				}else{
+					oneOrZeroFlag = '0';
+				}
+				switch(status)
+				{
+					case 1:
+						neededToSymbol--;
+						if(compressLevel == 1)
 						{
-							currSymbol = unionRead->Val.A;
-							status = 2;
-							neededToSymbol = 8;
+							if(neededToSymbol == 0)
+							{
+								currSymbol = unionRead->Val.A;
+								status = 2;
+								neededToSymbol = 8;
+							}
 						}
-					}
-					else if(compressLevel == 2)
-					{
-						/*if(neededToSymbol == 4)
+						else if(compressLevel == 2)
 						{
-							currSymbol = unionRead->Val.A;
-							currSymbol = currSymbol<<4;
+							/*if(neededToSymbol == 4)
+							{
+								currSymbol = unionRead->Val.A;
+								currSymbol = currSymbol<<4;
+							}
+							else if(neededToSymbol == 0)
+							{
+								currSymbol += (unionRead->Val.A & 0b00001111);
+								status = 2;
+								neededToSymbol = 12;
+							}*/
+							if(neededToSymbol == 0)
+							{
+								currSymbol = 0;
+								currSymbol = unionRead->buf;
+								currSymbol = (currSymbol & 0b0000111111111111);
+								status = 2;
+								neededToSymbol = 12;
+							}
 						}
-						else if(neededToSymbol == 0)
+						else if(compressLevel == 3)
 						{
-							currSymbol += (unionRead->Val.A & 0b00001111);
-							status = 2;
-							neededToSymbol = 12;
-						}*/
-						if(neededToSymbol == 0)
-						{
-							currSymbol = 0;
-							currSymbol = unionRead->buf;
-							currSymbol = (currSymbol & 0b0000111111111111);
-							status = 2;
-							neededToSymbol = 12;
-						}
-					}
-					else if(compressLevel == 3)
-					{
-						if(neededToSymbol == 8)
-						{
-							currSymbol = unionRead->Val.A;
-							currSymbol = currSymbol<<8;
-							//fprintf(stderr, "jakies cyfry: %d\n", currSymbol);
-						}else if(neededToSymbol == 0)
-						{
-							currSymbol += unionRead->Val.A;
-							status = 2;
+							if(neededToSymbol == 8)
+							{
+								currSymbol = unionRead->Val.A;
+								currSymbol = currSymbol<<8;
+								//fprintf(stderr, "jakies cyfry: %d\n", currSymbol);
+							}else if(neededToSymbol == 0)
+							{
+								currSymbol += unionRead->Val.A;
+								status = 2;
 
-							//fprintf(stderr, "jakies cyfry 2: %d\n", currSymbol);
-							neededToSymbol = 16;
+								//fprintf(stderr, "jakies cyfry 2: %d\n", currSymbol);
+								neededToSymbol = 16;
+							}
 						}
-					}
-					break;
-				case 2:
-					neededToBitLength--;
-					if(neededToBitLength == 0)
-					{
-						currBitLength = unionRead->Val.A;
-						status = 3;
-						neededToBitLength = 8;
-						neededToCode = currBitLength;
-						currCode = malloc( (neededToCode + 1) * sizeof(currCode));
-					}
-					break;
-				case 3: 
-					neededToCode--;
-					currCode[currentCodeIndex] = oneOrZeroFlag;
-					currentCodeIndex++;
-					if(neededToCode == 0)			/*add to dictionary*/
-					{
-						currCode[currentCodeIndex] = '\0';
-						readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
-						status = 1;
-						currentCodeIndex = 0;
-						currSymbol = 0;				
-						free(currCode);
-					}
-					break;
+						break;
+					case 2:
+						neededToBitLength--;
+						if(neededToBitLength == 0)
+						{
+							currBitLength = unionRead->Val.A;
+							status = 3;
+							neededToBitLength = 8;
+							neededToCode = currBitLength;
+							currCode = malloc( (neededToCode + 1) * sizeof(currCode));
+						}
+						break;
+					case 3: 
+						neededToCode--;
+						currCode[currentCodeIndex] = oneOrZeroFlag;
+						currentCodeIndex++;
+						if(neededToCode == 0)			/*add to dictionary*/
+						{
+							currCode[currentCodeIndex] = '\0';
+							readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
+							status = 1;
+							currentCodeIndex = 0;
+							currSymbol = 0;				
+							free(currCode);
+						}
+						break;
+				}
 			}
 		}
-	}
-	/*dictionary *iterDict;
 
-	for(iterDict = readDict; iterDict != NULL; iterDict=iterDict->next)
-	{
-		fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", iterDict->symbol, iterDict->bitLength, iterDict->code);
-	}*/
-	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));		/*malloc'ing char for max length of dictionary code*/
+		dictionary *iterDict;
+		trieNode *root = addNode();
+		
+		for(iterDict = readDict; iterDict != NULL; iterDict=iterDict->next)
+		{
+			addWord(root, iterDict->code, iterDict->symbol);
+			//fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", iterDict->symbol, iterDict->bitLength, iterDict->code);
+		}
+
+		char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	/*malloc'ing char for max length of dictionary code*/
 	
-	int currentReadLength = 0;					
-	dictionary *currentEntry = NULL;
-	fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
+		fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
 	
-	currZero = 0;
-	i = 8 + dictLength;
-	/*tu były rzeczy*/
-	if(compressLevel == 1)
-	{
-		decompressL1(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
-	}
-	else if(compressLevel == 2)
-	{
-		decompressL2(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
-	}
-	else if(compressLevel == 3)
-	{
-		decompressL3(infile, inName, outfile, readDict, dictLength, notCompressedBytes, lastBits);
-	}
-	free(currentReadCode);
-	free(unionRead);
-	free(dictBuffer);
-	freeDict(readDict);
+		if(compressLevel == 1)
+		{
+			decompressL1(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+		}
+		else if(compressLevel == 2)
+		{
+			decompressL2(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+		}
+		else if(compressLevel == 3)
+		{
+			decompressL3(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+		}
+		free(currentReadCode);
+		free(unionRead);
+		free(dictBuffer);
+		freeDict(readDict);
+		freeTrie(root);
 	}/*KONIEC IFA Z CL!=0*/
 	else{
 		fseek(infile, 8, SEEK_SET);
@@ -336,11 +338,11 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	return 0;
 }
 
-void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits) 
+void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits) 
 {
 	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
-	dictionary *currentEntry = NULL;
+	trieNode *currentEntry = NULL;
 	int currZero = 0;
 	int i = 8 + dictLength;
 	int j;
@@ -373,7 +375,8 @@ void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 				currentReadCode[currentReadLength++] = '0';
 			}
 			currentReadCode[currentReadLength] = '\0';
-			if( ( currentEntry = findMatchingCode(readDict, currentReadCode) ) != NULL )	/*find if the code exists in the dictionary*/
+			//if( ( currentEntry = findMatchingCode(readDict, currentReadCode) ) != NULL )	
+			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 		/*find if the code exists in the dictionary*/
 			{
 				fprintf(outfile, "%c", currentEntry->symbol);
 				currentReadLength = 0;
@@ -392,11 +395,11 @@ void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 
 }
 
-void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits)
+void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
 {
 	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
-	dictionary *currentEntry = NULL;
+	trieNode *currentEntry = NULL;
 	int currZero = 0;
 	int i = 8 + dictLength;
 	int j;
@@ -434,7 +437,8 @@ void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 			}
 			currentReadCode[currentReadLength] = '\0';
 			
-			if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			//if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 
 			{
 				
 				unsigned short symbol = currentEntry->symbol;
@@ -478,11 +482,11 @@ void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 
 }
 
-void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, int dictLength, int notCompressedBytes, int lastBits)
+void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
 {
 	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
-	dictionary *currentEntry = NULL;
+	trieNode *currentEntry = NULL;
 	int currZero = 0;
 	int i = 8 + dictLength;
 	int j;
@@ -519,7 +523,8 @@ void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 			}
 			currentReadCode[currentReadLength] = '\0';
 			
-			if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			//if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
+			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 
 			{
 				unsigned short symbol = 0;
 				unsigned char secondHalf = 0;

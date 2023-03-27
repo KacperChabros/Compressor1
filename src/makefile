@@ -1,7 +1,8 @@
-a.out: main.o readFile.o huffman.o compress.o cypher.o decompress.o
+a.out: main.o readFile.o huffman.o compress.o cypher.o decompress.o trie.o
 	 $(CC) $^ -lm
 main.o: readFile.h huffman.h compress.h
-decompress.o: huffman.h compress.h decompress.h
+decompress.o: huffman.h compress.h decompress.h trie.h
+trie.o: trie.h huffman.h
 cypher.o: cypher.h
 compress.o: huffman.h compress.h
 huffman.o: readFile.h huffman.h

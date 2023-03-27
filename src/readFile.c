@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "readFile.h"
+#include "trie.h"
 unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer, int compresslevel, int *lastBytesNotCompressed, unsigned char *notCompressedBytes)
 {
 	unsigned char buffer[2];

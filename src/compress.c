@@ -81,103 +81,103 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	}
 	else
 	{
-	for(iter=dict;iter!=NULL;iter=iter->next)
-	{	
-
-		int currSymbol = iter->symbol;
-		int currBitLength = iter->bitLength;
-		for(i=iterator; i>=0; i--)		/*writing symbol*/
-		{
-			int power = pow(2, i);
-			tempSize+=1;
-			if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
-			{
-				fwrite(&unionDict->Val.A,1,1,outfile);	
-				checksum=checksum^unionDict->Val.A;
-				tempSize-=8;
-				dictLength++;
-			}
-			unionDict->buf = unionDict->buf<<1;
-			if(currSymbol >= power)
-			{
-				unionDict->buf+=1;
-				currSymbol-=power;
-			}	
-		}
-		for(i=7; i>=0; i--)			/*writing length of code in bits*/
+		for(iter=dict;iter!=NULL;iter=iter->next)
 		{	
-			int power = pow(2, i);
-			tempSize+=1;
-			if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
-			{
-				fwrite(&unionDict->Val.A,1,1,outfile);	
-				checksum=checksum^unionDict->Val.A;
-				tempSize-=8;
-				dictLength++;
-			}
-			unionDict->buf = unionDict->buf<<1;
-			if(currBitLength >= power)
-			{
-				unionDict->buf+=1;
-				currBitLength-=power;
-			}	
-		}
 
-		for(i=0;i<iter->bitLength;i++)		/*writing code to file*/
-		{
-			tempSize+=1;
-			if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+			int currSymbol = iter->symbol;
+			int currBitLength = iter->bitLength;
+			for(i=iterator; i>=0; i--)		/*writing symbol*/
 			{
-				fwrite(&unionDict->Val.A,1,1,outfile);	
-				checksum=checksum^unionDict->Val.A;
-				tempSize-=8;
-				dictLength++;
-			}
-
-			if(iter->code[i] == '1')		/*push bits to the left and place 1 as youngest bit*/
-			{
+				int power = pow(2, i);
+				tempSize+=1;
+				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+				{
+					fwrite(&unionDict->Val.A,1,1,outfile);	
+					checksum=checksum^unionDict->Val.A;
+					tempSize-=8;
+					dictLength++;
+				}
 				unionDict->buf = unionDict->buf<<1;
-				unionDict->buf+=1;
-			}else if(iter->code[i] == '0'){		/*push bits to the left*/
-				unionDict->buf = unionDict->buf<<1;
+				if(currSymbol >= power)
+				{
+					unionDict->buf+=1;
+					currSymbol-=power;
+				}	
 			}
-		}
-	}
-	if(tempSize>0)		/*add zeroes to fill the byte and write to file*/
-	{
-		unionDict->buf=unionDict->buf<<(8-tempSize);
-		fwrite(&unionDict->Val.A,1,1,outfile);
-		checksum=checksum^unionDict->Val.A;
-		dictLength++;
-		lastBitsOfDict = tempSize;
-	}else{							/*tempSize == 0 then all bits of last bytes are important*/
-		lastBitsOfDict = 8;
-	}
-	if(info==true)
-		fprintf(stderr, "Number of extra bits in the last byte of dictionary: %d\n", 8-lastBitsOfDict);
-	tempSize=0;
-	for(i=0;i<counter;i++)
-	{
-		tmp=findCode(dict,bigbuffer[i]);	/*find code for current symbol*/
-		for(j=0; j<tmp->bitLength; j++)
-		{
-			tempSize+=1;
-			if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
-			{
-				fwrite(&union1->Val.A,1,1,outfile);	
-				checksum=checksum^union1->Val.A;
-				tempSize-=8;
+			for(i=7; i>=0; i--)			/*writing length of code in bits*/
+			{	
+				int power = pow(2, i);
+				tempSize+=1;
+				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+				{
+					fwrite(&unionDict->Val.A,1,1,outfile);	
+					checksum=checksum^unionDict->Val.A;
+					tempSize-=8;
+					dictLength++;
+				}
+				unionDict->buf = unionDict->buf<<1;
+				if(currBitLength >= power)
+				{
+					unionDict->buf+=1;
+					currBitLength-=power;
+				}	
 			}
 
-			if(tmp->code[j] == '1')		/*push bits to the left and place 1 as youngest bit*/
+			for(i=0;i<iter->bitLength;i++)		/*writing code to file*/
 			{
-				union1->buf = union1->buf<<1;
-				union1->buf+=1;
-			}else if(tmp->code[j] == '0'){	/*push bits to the left*/
-				union1->buf = union1->buf<<1;
+				tempSize+=1;
+				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+				{
+					fwrite(&unionDict->Val.A,1,1,outfile);	
+					checksum=checksum^unionDict->Val.A;
+					tempSize-=8;
+					dictLength++;
+				}
+
+				if(iter->code[i] == '1')		/*push bits to the left and place 1 as youngest bit*/
+				{
+					unionDict->buf = unionDict->buf<<1;
+					unionDict->buf+=1;
+				}else if(iter->code[i] == '0'){		/*push bits to the left*/
+					unionDict->buf = unionDict->buf<<1;
+				}
 			}
 		}
-	}
+		if(tempSize>0)		/*add zeroes to fill the byte and write to file*/
+		{
+			unionDict->buf=unionDict->buf<<(8-tempSize);
+			fwrite(&unionDict->Val.A,1,1,outfile);
+			checksum=checksum^unionDict->Val.A;
+			dictLength++;
+			lastBitsOfDict = tempSize;
+		}else{							/*tempSize == 0 then all bits of last bytes are important*/
+			lastBitsOfDict = 8;
+		}
+		if(info==true)
+			fprintf(stderr, "Number of extra bits in the last byte of dictionary: %d\n", 8-lastBitsOfDict);
+		tempSize=0;
+		for(i=0;i<counter;i++)
+		{
+			tmp=findCode(dict,bigbuffer[i]);	/*find code for current symbol*/
+			for(j=0; j<tmp->bitLength; j++)
+			{
+				tempSize+=1;
+				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
+				{
+					fwrite(&union1->Val.A,1,1,outfile);	
+					checksum=checksum^union1->Val.A;
+					tempSize-=8;
+				}
+
+				if(tmp->code[j] == '1')		/*push bits to the left and place 1 as youngest bit*/
+				{
+					union1->buf = union1->buf<<1;
+					union1->buf+=1;
+				}else if(tmp->code[j] == '0'){	/*push bits to the left*/
+					union1->buf = union1->buf<<1;
+				}
+			}
+		}
 	}/*END OF COMPRESSIONLEVEL!=0*/
 	if(tempSize>0)		/*add zeroes to fill the byte and write to file*/
 	{
@@ -237,4 +237,6 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	fprintf(outfile, "%c", notCompressedAndDictLengthFlag);
 	/*fprintf(outfile, "%c", lastBitsOfDict);*/				/*writing the number of the oldest important bits in the last byte of
 									  dictionary*/
+	free(union1);
+	free(unionDict);
 }
