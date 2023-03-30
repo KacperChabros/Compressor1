@@ -9,17 +9,17 @@
 #include <time.h>
 void showHelp()
 {
-	printf("Prawidłowe wywołanie: ./prog <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
-	printf(" -x  Plik infile ma zostać zdekompresowany.Jeśli jest już zdekompresowany program wyświetli błąd \n -z Plik infile ma zostać skompresowany. \n -o<0,1,2,3> Poziom kompresji. Domyślny poziom kompresji to 1\n -c <haslo> Plik infile ma zostać zaszyfrowany podanym hasłem.Ten parametr musi zostać podany jako osobny parametr lub na koniec zbioru parametrów\n -v Program wypisze dodatkowe informacje\n");
+	printf("Prawidłowe wywołanie: ./skcomp <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
+	printf(" -x  Plik infile ma zostać zdekompresowany.Jeśli jest już zdekompresowany program wyświetli błąd \n -z Plik infile ma zostać skompresowany. \n -o<0,1,2,3> Poziom kompresji.\n o0 - brak kompresji\n o1 - kompresja 8-bitowa\n o2 - kompresja 12 - bitowa\n o3 - kompresja 16-bitowa\n -  Domyślny poziom kompresji to 1\n -c <haslo> Plik infile ma zostać zaszyfrowany podanym hasłem.Ten parametr musi zostać podany jako osobny parametr lub na koniec zbioru parametrów\n -v Program wypisze dodatkowe informacje\n");
        printf("Uwaga: -x i -z nie mogą być użyte jednocześnie\n");	
 	printf("\n");
-	printf("Correct usage: ./prog <infile> <outfile> [parameters]\n"); 
+	printf("Correct usage: ./skcomp <infile> <outfile> [parameters]\n"); 
 	printf("Infile: Input file\n"); 
 	printf("Outfile: Output file\n");
        	printf("Parameters:\n"); 
 	printf("-x Decompress input file. If already decompressed display error.\n"); 
 	printf("-z Compress input file.\n");
-       	printf("-o<0,1,2,3> Level of compression. Default is 1.\n");
+       	printf("-o<0,1,2,3> Level of compression.\n o0 - no compression\n o1 - 8-bit compresssion\n o2 - 12-bit compression\n o3 - 16-bit compression\n-Default is 1.\n");
        	printf("-c <password> Cypher input file with the given password. This parameter must be given separately or at the end of other parameters.\n"); 
 	printf("-v Display additional informations.\n");
 	printf("Note: -x and -z cannot be used together.\n");

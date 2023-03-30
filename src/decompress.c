@@ -46,11 +46,11 @@ int isValid(unsigned char checkSum, FILE *infile)
 		return 6;
 	}
 }
-void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL1(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
-void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL2(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
-void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
+void decompressL3(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits);
 
 
 int decompressFile(FILE *infile, char *inName, char *outName, char checksum, bool info)
@@ -92,7 +92,7 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	{
 		if(buffer[0] != 'S')
 		{
-			fprintf(stderr,"This file hasn't been compressed by this program and has already been decompressed\n");
+			fprintf(stderr,"This file hasn't been compressed by this program or has already been decompressed\n");
 			return 4;
 		}
 	}
@@ -190,6 +190,10 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 		unsigned char oneOrZeroFlag = 0;			
 		unsigned char currentCodeIndex = 0;		
        		int currZero = 0;	
+		int maxLengthOfCode = 0;
+
+		trieNode *root = addNode();
+
 		for(i=0; i<dictLength; i++)
 		{
 			currBuf = dictBuffer[i];
@@ -283,7 +287,10 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 						if(neededToCode == 0)			/*add to dictionary*/
 						{
 							currCode[currentCodeIndex] = '\0';
-							readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
+							//readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
+							addWord(root, currCode, currSymbol);
+							if(currBitLength >= maxLengthOfCode)
+								maxLengthOfCode = currBitLength;
 							status = 1;
 							currentCodeIndex = 0;
 							currSymbol = 0;				
@@ -294,32 +301,32 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 			}
 		}
 
-		dictionary *iterDict;
+		/*dictionary *iterDict;
 		trieNode *root = addNode();
 		
 		for(iterDict = readDict; iterDict != NULL; iterDict=iterDict->next)
 		{
 			addWord(root, iterDict->code, iterDict->symbol);
 			//fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", iterDict->symbol, iterDict->bitLength, iterDict->code);
-		}
+		}*/
 
-		char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	/*malloc'ing char for max length of dictionary code*/
+		/*char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));*/	/*malloc'ing char for max length of dictionary code*/
 	
 		fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
 	
 		if(compressLevel == 1)
 		{
-			decompressL1(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+			decompressL1(infile, inName, outfile, maxLengthOfCode, root, dictLength, notCompressedBytes, lastBits);
 		}
 		else if(compressLevel == 2)
 		{
-			decompressL2(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+			decompressL2(infile, inName, outfile, maxLengthOfCode, root, dictLength, notCompressedBytes, lastBits);
 		}
 		else if(compressLevel == 3)
 		{
-			decompressL3(infile, inName, outfile, readDict, root, dictLength, notCompressedBytes, lastBits);
+			decompressL3(infile, inName, outfile, maxLengthOfCode, root, dictLength, notCompressedBytes, lastBits);
 		}
-		free(currentReadCode);
+		//free(currentReadCode);
 		free(unionRead);
 		free(dictBuffer);
 		freeDict(readDict);
@@ -338,9 +345,9 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	return 0;
 }
 
-void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits) 
+void decompressL1(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits) 
 {
-	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	char *currentReadCode = malloc( maxLengthOfCode * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
 	trieNode *currentEntry = NULL;
 	int currZero = 0;
@@ -393,11 +400,12 @@ void decompressL1(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 		}
 	}
 
+	free(currentReadCode);
 }
 
-void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
+void decompressL2(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
 {
-	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	char *currentReadCode = malloc( maxLengthOfCode * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
 	trieNode *currentEntry = NULL;
 	int currZero = 0;
@@ -480,11 +488,12 @@ void decompressL2(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 		}
 	}
 
+	free(currentReadCode);
 }
 
-void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDict, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
+void decompressL3(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode, trieNode *root, int dictLength, int notCompressedBytes, int lastBits)
 {
-	char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));	
+	char *currentReadCode = malloc( maxLengthOfCode * sizeof(*currentReadCode));	
 	int currentReadLength = 0;
 	trieNode *currentEntry = NULL;
 	int currZero = 0;
@@ -553,5 +562,5 @@ void decompressL3(FILE *infile, char *inName, FILE *outfile, dictionary *readDic
 			fprintf(outfile, "%c", buffer[0]);
 		}
 	}
-
+	free(currentReadCode);
 }
