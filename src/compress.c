@@ -190,9 +190,6 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	}
 	if(info==true)
 		fprintf(stderr, "Extra bits of last compressed byte: %d\n", 8-tempSize);
-	//fseek(outfile,2,SEEK_SET);	/*write flag and checksum*
-	//fprintf(outfile,"%c",flag);
-	//fprintf(outfile,"%c",checksum);
 	
 	for(i=0; i<lastBytesNotCompressed; i++)
 	{
@@ -212,18 +209,13 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 
 	secondOldestChar = secondOldest>>16;				/*shifting bits to the right to make them fit into char*/
 	thirdOldestChar = thirdOldest>>8;
-	//fprintf(outfile, "%c", secondOldestChar);			/*writing them to file*
-	//fprintf(outfile, "%c", thirdOldestChar);
-	//fprintf(outfile, "%c", fourthOldest);
 									
-	//fprintf(outfile, "%c", lastBitsOfDict);				/*writing the number of the oldest important bits in the last byte of dictionary*
 	
 	checksum = checksum ^ secondOldestChar;
 	checksum = checksum ^ thirdOldestChar;
 	checksum = checksum ^ fourthOldest;
 
 	notCompressedAndDictLengthFlag += lastBitsOfDict;
-	//checksum = checksum ^ lastBitsOfDict;
 	checksum = checksum ^ notCompressedAndDictLengthFlag;
 
 	fseek(outfile,2,SEEK_SET);	/*write flag and checksum*/
@@ -234,9 +226,9 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	fprintf(outfile, "%c", thirdOldestChar);
 	fprintf(outfile, "%c", fourthOldest);
 
-	fprintf(outfile, "%c", notCompressedAndDictLengthFlag);
-	/*fprintf(outfile, "%c", lastBitsOfDict);*/				/*writing the number of the oldest important bits in the last byte of
-									  dictionary*/
+	fprintf(outfile, "%c", notCompressedAndDictLengthFlag);		/*writing number of not compressed bytes and number of important bits in the last
+									  byte of dictionary*/
+	
 	free(union1);
 	free(unionDict);
 }

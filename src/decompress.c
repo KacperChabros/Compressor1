@@ -15,7 +15,6 @@ int isValid(unsigned char checkSum, FILE *infile)
 	unsigned char buffer[1];
 	unsigned char tmpSum;
 	fseek(infile, 3, SEEK_SET);
-	//fread(buffer, 1, 1, infile);
 	if(fread(buffer, 1, 1, infile) == 1)
 	{
 		tmpSum = buffer[0];
@@ -36,7 +35,6 @@ int isValid(unsigned char checkSum, FILE *infile)
 			tmpSum = tmpSum ^ buffer[0];
 		}
 	}
-	//fprintf(stderr,"tmpSum:%d | checkSum: %d\n",tmpSum,checkSum);
 	if(tmpSum == checkSum)
 	{
 		fprintf(stderr,"The file is valid!\n");
@@ -60,7 +58,6 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	stat(inName, &stats);
 	unsigned long long int sizeOfFile = stats.st_size;
 	int isCorrupted = 0;
-	/*fprintf(stderr, "To rozmiar pliku: %lld w bajtach\n", sizeOfFile);*/
 	unsigned char buffer[1];
 	unsigned char *dictBuffer;
 	int i, j;
@@ -79,14 +76,11 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	unsigned char lastBitsOfDict = 0;
 	unsigned char notCompressedBytes = 0;
 
-	/*unsigned char currSymbol = 0;*/
 	unsigned short currSymbol = 0;
 	unsigned char currBitLength = 0;
 	int tempSize = 0;	
 	unsigned char status = 1; 				/* status defines whether we are looking for a symbol {1}, a bitLength {2} or a Code {3}
 								   to make a dictionary*/
-	/*call isValid*/
-	//fseek(infile, 2, SEEK_SET);
 	fseek(infile, 0, SEEK_SET);
 	if( fread(buffer, 1, 1, infile) == 1)
 	{
@@ -128,10 +122,8 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 	}
 	if(info == true)
 		fprintf(stderr,"Read Masks:\nCompressLevel: %d, isCyphered: %d, no. important bits of last compressed byte: %d\n", compressLevel, cypher, lastBits);
-	/*call isValid*/
 	if( (isCorrupted = isValid(checksum, infile) != 0))
 		return isCorrupted;
-	//fprintf(stderr,"JESTEM\n");
 	fseek(infile,4, SEEK_SET);
 	for(i=0; i<3; i++)
 	{
@@ -232,17 +224,6 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 						}
 						else if(compressLevel == 2)
 						{
-							/*if(neededToSymbol == 4)
-							{
-								currSymbol = unionRead->Val.A;
-								currSymbol = currSymbol<<4;
-							}
-							else if(neededToSymbol == 0)
-							{
-								currSymbol += (unionRead->Val.A & 0b00001111);
-								status = 2;
-								neededToSymbol = 12;
-							}*/
 							if(neededToSymbol == 0)
 							{
 								currSymbol = 0;
@@ -258,13 +239,10 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 							{
 								currSymbol = unionRead->Val.A;
 								currSymbol = currSymbol<<8;
-								//fprintf(stderr, "jakies cyfry: %d\n", currSymbol);
 							}else if(neededToSymbol == 0)
 							{
 								currSymbol += unionRead->Val.A;
 								status = 2;
-
-								//fprintf(stderr, "jakies cyfry 2: %d\n", currSymbol);
 								neededToSymbol = 16;
 							}
 						}
@@ -287,7 +265,6 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 						if(neededToCode == 0)			/*add to dictionary*/
 						{
 							currCode[currentCodeIndex] = '\0';
-							//readDict = addToReadDict(readDict, currSymbol, currBitLength, currCode);
 							addWord(root, currCode, currSymbol);
 							if(currBitLength >= maxLengthOfCode)
 								maxLengthOfCode = currBitLength;
@@ -301,17 +278,6 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 			}
 		}
 
-		/*dictionary *iterDict;
-		trieNode *root = addNode();
-		
-		for(iterDict = readDict; iterDict != NULL; iterDict=iterDict->next)
-		{
-			addWord(root, iterDict->code, iterDict->symbol);
-			//fprintf(stderr, "Symbol: %d, bitLength: %d, code: %s\n", iterDict->symbol, iterDict->bitLength, iterDict->code);
-		}*/
-
-		/*char *currentReadCode = malloc( findLongestCode(readDict) * sizeof(*currentReadCode));*/	/*malloc'ing char for max length of dictionary code*/
-	
 		fseek(infile, 8+dictLength, SEEK_SET);								/*8 is size of header*/
 	
 		if(compressLevel == 1)
@@ -326,7 +292,6 @@ int decompressFile(FILE *infile, char *inName, char *outName, char checksum, boo
 		{
 			decompressL3(infile, inName, outfile, maxLengthOfCode, root, dictLength, notCompressedBytes, lastBits);
 		}
-		//free(currentReadCode);
 		free(unionRead);
 		free(dictBuffer);
 		freeDict(readDict);
@@ -382,7 +347,6 @@ void decompressL1(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode
 				currentReadCode[currentReadLength++] = '0';
 			}
 			currentReadCode[currentReadLength] = '\0';
-			//if( ( currentEntry = findMatchingCode(readDict, currentReadCode) ) != NULL )	
 			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 		/*find if the code exists in the dictionary*/
 			{
 				fprintf(outfile, "%c", currentEntry->symbol);
@@ -445,7 +409,6 @@ void decompressL2(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode
 			}
 			currentReadCode[currentReadLength] = '\0';
 			
-			//if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
 			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 
 			{
 				
@@ -532,7 +495,6 @@ void decompressL3(FILE *infile, char *inName, FILE *outfile, int maxLengthOfCode
 			}
 			currentReadCode[currentReadLength] = '\0';
 			
-			//if( (currentEntry = findMatchingCode(readDict, currentReadCode)) != NULL)
 			if( (currentEntry = lookForSymbol(root, currentReadCode)) != NULL ) 
 			{
 				unsigned short symbol = 0;

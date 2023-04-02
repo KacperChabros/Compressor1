@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "readFile.h"
-#include "trie.h"
 unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer, int compresslevel, int *lastBytesNotCompressed, unsigned char *notCompressedBytes)
 {
 	unsigned char buffer[2];
@@ -13,7 +12,7 @@ unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer
 			if(file->counter==file->length)
 			{
 				file->length *= 2;
-				bigbuffer = realloc(bigbuffer, file->length * sizeof(unsigned short)); /*ZMIANY*/
+				bigbuffer = realloc(bigbuffer, file->length * sizeof(unsigned short));
 			}
 			bigbuffer[file->counter] = buffer[0];
 			file->counter++;
@@ -40,15 +39,12 @@ unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer
 				bigbuffer[file->counter] += buff[0];
 				bigbuffer[file->counter] = bigbuffer[file->counter] << 4;
 				bigbuffer[file->counter] += tmp1;
-				//bigbuffer[file->counter] += (buff[1] & 0b11110000);
 				file->counter++;
 				bigbuffer[file->counter] = 0;
 				bigbuffer[file->counter] += (buff[1] & 0b00001111);
 				bigbuffer[file->counter] = bigbuffer[file->counter] << 8;
 				bigbuffer[file->counter] += buff[2];
 				file->counter++;
-				//fprintf(stderr, "to %d + pierwsze cztery tego %d dało to: %d\n", buff[0], buff[1], bigbuffer[file->counter-1]);
-				//fprintf(stderr, "drugie 4 tego %d + to %d dało to: %d\n\n", buff[1], buff[2], bigbuffer[file->counter]);
 
 			}
 			else if(readBytes == 2)
@@ -83,7 +79,6 @@ unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer
 				bigbuffer[file->counter] += buffer[0];
 			       	bigbuffer[file->counter] = bigbuffer[file->counter] << 8;
 				bigbuffer[file->counter] += buffer[1];
-				/*fprintf(stderr, "To: %d + to %d daje to: cyfra: %d\n", buffer[0], buffer[1], bigbuffer[file->counter]);*/
 				file->counter++;
 			}
 			else
@@ -95,7 +90,7 @@ unsigned short *readfile(fileInfo_t file,FILE *infile, unsigned short *bigbuffer
 	}
 	return bigbuffer;
 }
-charInfo *frequency(fileInfo_t file, unsigned short *bigbuffer, charInfo *charinfo1)	/*ZMIANY*/
+charInfo *frequency(fileInfo_t file, unsigned short *bigbuffer, charInfo *charinfo1)
 {
 	int i;
 	for(i=0; i<file->counter; i++)
@@ -104,7 +99,7 @@ charInfo *frequency(fileInfo_t file, unsigned short *bigbuffer, charInfo *charin
 	}
 	return charinfo1;
 }
-charInfo *addcharInfo(charInfo *info,unsigned short buffer, int *distinctChars) 	/*ZMIANY*/
+charInfo *addcharInfo(charInfo *info,unsigned short buffer, int *distinctChars)
 {
 	if(info==NULL)
 	{

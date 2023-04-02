@@ -7,6 +7,7 @@
 #include "cypher.h"
 #include "decompress.h"
 #include <time.h>
+#include <string.h>
 void showHelp()
 {
 	printf("Prawidłowe wywołanie: ./skcomp <infile> <outfile> [parametry]\nInfile: Plik wejściowy\nOutfile: Plik wyjściowy\nParametry:\n"); 
@@ -37,16 +38,7 @@ int main(int argc, char **argv)
 	unsigned char checksum=0b10001001;
 	fileInfo_t file1;
 	unsigned short *bigbuffer;
-	/*fileInfo_t file1=malloc(sizeof(file1));
-	file1->length=1000;
-	file1->counter=0;
-	file1->distinctChars=0;*/
 	charInfo *charinfo1=NULL;
-	/*file1->character=NULL;*/
-	
-	/*file1->bigbuffer=malloc(file1->length * sizeof(file1->bigbuffer));*/
-	/*unsigned short *bigbuffer = malloc( file1->length * sizeof(*bigbuffer));*/ /*zmiany*/
-	
 	int lastBytesNotCompressed = 0;						/*defines how many last bytes of infile are not compressed
 										  * 1st compression level - 0
 										  * 2nd compression level - 0, 1 or 2 bytes
@@ -132,6 +124,11 @@ int main(int argc, char **argv)
 		showHelp();
 		return 1;
 	}
+	if(strcmp(argv[1], argv[2]) == 0)
+	{
+		fprintf(stderr, "infile and outfile cannot have the same name\n");
+		return 1;
+	}
 	infile=fopen(argv[1],"rb");
 	outfile=fopen(argv[2],"wb");
 	if(infile==NULL && outfile == NULL)
@@ -176,10 +173,6 @@ int main(int argc, char **argv)
 			return 3;
 		}
 		if(info==true){
-			/*for(i=0; i<file1->counter; i++)
-			{
-				printf("Code of symbol: %d\n", bigbuffer[i]);
-			}*/
 			if( lastBytesNotCompressed > 0 )
 			{
 				int k;

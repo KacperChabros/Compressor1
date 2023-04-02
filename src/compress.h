@@ -8,10 +8,6 @@ struct values{
 typedef union data{
 	short buf; 
 	struct values Val;
-	/*struct values{
-		char A;
-		char B;
-	};*/
 }data_t;
 dictionary *findCode(dictionary *dict,unsigned short symbol);
 
