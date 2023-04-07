@@ -19,7 +19,7 @@ dictionary *findCode(dictionary *dict,unsigned short symbol)	/* returns an insta
 	}
 	return NULL;
 }
-void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter, int compressLevel, bool cypher, unsigned char checksum, int lastBytesNotCompressed, unsigned char *notCompressedBytes,bool info)
+int binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter, int compressLevel, bool cypher, unsigned char checksum, int lastBytesNotCompressed, unsigned char *notCompressedBytes,bool info)
 {
 	int i, j;
 	int iterator=0;
@@ -54,7 +54,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 			break;
 	}
 
-	fprintf(outfile,"SK");				/*distinctive beginning of our compressed file*/
+	if(fprintf(outfile,"SK") < 0)		/*distinctive beginning of our compressed file*/
+	{
+		free(union1);
+		free(unionDict);
+		return 8;
+	}
 	if(compressLevel==1)				/*adding level of compression to flag - 2 oldest bits*/
 		flag+=64;
 	else if(compressLevel==2)
@@ -69,14 +74,25 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	else if(lastBytesNotCompressed == 2)
 		notCompressedAndDictLengthFlag += 128;
 
-	fseek(outfile,6,SEEK_CUR);			/*leaving space for flag and checksum and dictionary length and how many bits left in
+	if( fseek(outfile,6,SEEK_CUR) != 0 )
+	{
+		free(union1);
+		free(unionDict);
+		return 7;
+	}
+							/*leaving space for flag and checksum and dictionary length and how many bits left in
 							  the last byte of dictionary are important. Dictionary length is 3 bytes*/
 	
 	if(compressLevel == 0)
 	{	for(i=0;i<counter;i++)
 		{
 			checksum=checksum^bigbuffer[i];
-			fwrite((bigbuffer+i),1,1,outfile);
+			if(fwrite((bigbuffer+i),1,1,outfile) != 1 )
+			{
+				free(union1);
+				free(unionDict);
+				return 8;
+			}
 		}
 	}
 	else
@@ -92,7 +108,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 				tempSize+=1;
 				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
 				{
-					fwrite(&unionDict->Val.A,1,1,outfile);	
+					if( fwrite(&unionDict->Val.A,1,1,outfile) != 1 )
+					{
+						free(union1);
+						free(unionDict);
+						return 8;	
+					}
 					checksum=checksum^unionDict->Val.A;
 					tempSize-=8;
 					dictLength++;
@@ -110,7 +131,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 				tempSize+=1;
 				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
 				{
-					fwrite(&unionDict->Val.A,1,1,outfile);	
+					if( fwrite(&unionDict->Val.A,1,1,outfile) != 1)
+					{
+						free(union1);
+						free(unionDict);
+						return 8;	
+					}
 					checksum=checksum^unionDict->Val.A;
 					tempSize-=8;
 					dictLength++;
@@ -128,7 +154,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 				tempSize+=1;
 				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
 				{
-					fwrite(&unionDict->Val.A,1,1,outfile);	
+					if( fwrite(&unionDict->Val.A,1,1,outfile) != 1 )
+					{
+						free(union1);
+						free(unionDict);
+						return 8;
+					}	
 					checksum=checksum^unionDict->Val.A;
 					tempSize-=8;
 					dictLength++;
@@ -146,7 +177,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 		if(tempSize>0)		/*add zeroes to fill the byte and write to file*/
 		{
 			unionDict->buf=unionDict->buf<<(8-tempSize);
-			fwrite(&unionDict->Val.A,1,1,outfile);
+			if( fwrite(&unionDict->Val.A,1,1,outfile) != 1 )
+			{
+				free(union1);
+				free(unionDict);
+				return 8;
+			}
 			checksum=checksum^unionDict->Val.A;
 			dictLength++;
 			lastBitsOfDict = tempSize;
@@ -164,7 +200,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 				tempSize+=1;
 				if(tempSize > 8)		/* if its longer than a byte -> write to file and XOR written byte*/
 				{
-					fwrite(&union1->Val.A,1,1,outfile);	
+					if( fwrite(&union1->Val.A,1,1,outfile) != 1 )
+					{
+						free(union1);
+						free(unionDict);
+						return 8;
+					}
 					checksum=checksum^union1->Val.A;
 					tempSize-=8;
 				}
@@ -182,7 +223,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	if(tempSize>0)		/*add zeroes to fill the byte and write to file*/
 	{
 		union1->buf=union1->buf<<(8-tempSize);
-		fwrite(&union1->Val.A,1,1,outfile);
+		if( fwrite(&union1->Val.A,1,1,outfile) != 1 )
+		{
+			free(union1);
+			free(unionDict);
+			return 8;
+		}
 		checksum=checksum^union1->Val.A;
 		flag+=tempSize;		/*how many oldest bits of last byte (before not compressed ones) are important*/
 	}else{				/* tempSize == 0 -> all bits of last byte of file are important*/
@@ -193,7 +239,12 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	
 	for(i=0; i<lastBytesNotCompressed; i++)
 	{
-		fprintf(outfile, "%c", notCompressedBytes[i]);
+		if( fprintf(outfile, "%c", notCompressedBytes[i]) < 0 )
+		{
+			free(union1);
+			free(unionDict);
+			return 8;
+		}
 		checksum = checksum ^ notCompressedBytes[i];
 	}
 	if(info==true){
@@ -218,17 +269,29 @@ void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int cou
 	notCompressedAndDictLengthFlag += lastBitsOfDict;
 	checksum = checksum ^ notCompressedAndDictLengthFlag;
 
-	fseek(outfile,2,SEEK_SET);	/*write flag and checksum*/
-	fprintf(outfile,"%c",flag);
-	fprintf(outfile,"%c",checksum);
+	int returnCode = 0;
+	if( fseek(outfile,2,SEEK_SET) != 0 )	/*write flag and checksum*/
+		returnCode = 7;
+	if( fprintf(outfile,"%c",flag) < 0)
+		returnCode = 8;
+	if( fprintf(outfile,"%c",checksum) < 0)
+		returnCode = 8;
 
-	fprintf(outfile, "%c", secondOldestChar);			/*writing the length of dict to file*/
-	fprintf(outfile, "%c", thirdOldestChar);
-	fprintf(outfile, "%c", fourthOldest);
-
-	fprintf(outfile, "%c", notCompressedAndDictLengthFlag);		/*writing number of not compressed bytes and number of important bits in the last
+	if( fprintf(outfile, "%c", secondOldestChar) < 0 )			/*writing the length of dict to file*/
+		returnCode = 8;
+	if( fprintf(outfile, "%c", thirdOldestChar) < 0)
+		returnCode = 8;
+	if( fprintf(outfile, "%c", fourthOldest) < 0 )
+		returnCode = 8;
+	if( fprintf(outfile, "%c", notCompressedAndDictLengthFlag) < 0 )	
+		returnCode = 8;
+									/*writing number of not compressed bytes and number of important bits in the last
 									  byte of dictionary*/
 	
 	free(union1);
 	free(unionDict);
+	if(returnCode != 0 )
+		return returnCode;
+	else
+		return 0;
 }

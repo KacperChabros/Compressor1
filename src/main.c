@@ -204,13 +204,30 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum,lastBytesNotCompressed,notCompressedBytes,info);
+		int returnCode1 = 0;
+		if((returnCode1 = binWrite(dict1,bigbuffer,outfile,file1->counter,compresslevel,cypher,checksum,lastBytesNotCompressed,notCompressedBytes,info))!=0)
+		{
+			free(file1);
+			free(bigbuffer);
+			free(notCompressedBytes);
+			fclose(infile);
+			fclose(outfile);
+			return returnCode1;
+		}
 	}
 	fclose(outfile);
 	if(cypher==true && compress==true)			
 	{	
-			
-		xorcode(outfile,password,file1->length/2,argv[2],compresslevel);
+		int returnCodeCyp = 0;	
+		if( (returnCodeCyp = xorcode(outfile,password,file1->length/2,argv[2],compresslevel) ) != 0 )
+		{
+			free(file1);
+			free(bigbuffer);
+			free(notCompressedBytes);
+			fclose(infile);
+			fclose(outfile);
+			return returnCodeCyp;
+		}
 		//fclose(outfile);
 	}
 	fclose(infile);
@@ -221,12 +238,13 @@ int main(int argc, char **argv)
 			time_t t;
 			time(&t);
 			char *tmpname=ctime(&t);
-			if((xorfile(infile,password,file1->length,argv[1],checksum,tmpname)==6))
+			int returnCodeCyp2 = 0;
+			if( (returnCodeCyp2 = (xorfile(infile,password,file1->length,argv[1],checksum,tmpname)) != 0))
 			{
 				free(file1);
 				free(bigbuffer);
 				free(notCompressedBytes);
-				return 6;
+				return returnCodeCyp2;
 			}
 			infile=fopen(tmpname,"rb");
 			returnCode = decompressFile(infile, tmpname, argv[2], checksum, info);

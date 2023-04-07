@@ -11,5 +11,5 @@ typedef union data{
 }data_t;
 dictionary *findCode(dictionary *dict,unsigned short symbol);
 
-void binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter, int compressLevel, bool cypher, unsigned char checksum, int lastBytesNotCompressed, unsigned char *notCompressedBytes,bool info);
+int binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int counter, int compressLevel, bool cypher, unsigned char checksum, int lastBytesNotCompressed, unsigned char *notCompressedBytes,bool info);
 #endif
