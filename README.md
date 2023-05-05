@@ -15,21 +15,22 @@
 * display additional information during the process
 ## Setup and usage
 To run this project one should clone the repository, go to the folder with the repository using terminal and type "make". "Help" of skcomp is written below:
-Correct usage: ./skcomp <infile> <outfile> [parameters]
-	Infile: Input file 
-	Outfile: Output file
-    Parameters:
-	-x Decompress input file. If already decompressed display error.
-	-z Compress input file.
-    -o<0,1,2,3> Level of compression.
-    o0 - no compression
-    o1 - 8-bit compresssion
-    o2 - 12-bit compression
-    o3 - 16-bit compression
-    Default level is 1
-    -c <password> Cypher input file with the given password. This parameter must be given separately or at the end of other parameters.
-    -v Display additional information.
-	Note: -x and -z cannot be used together.
+Correct usage:  
+**_./skcomp <infile> <outfile> [parameters]_**  
+	Infile: Input file  
+	Outfile: Output file  
+    **Parameters:**  
+	-x Decompress input file. If already decompressed display error.  
+	-z Compress input file.  
+    -o<0,1,2,3> Level of compression.  
+    o0 - no compression  
+    o1 - 8-bit compresssion  
+    o2 - 12-bit compression  
+    o3 - 16-bit compression  
+    Default level is 1  
+    -c <password> Cypher input file with the given password. This parameter must be given separately or at the end of other parameters.  
+    -v Display additional information.  
+	Note: -x and -z cannot be used together.  
 ## Credits
 I created this project with:
 * [Grazzly](https://github.com/Grazzly)
