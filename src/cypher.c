@@ -5,16 +5,13 @@
 #include "cypher.h"
 int xorcode(FILE *outfile,char *key,int length, char *file,int compresslevel) /*Overwrites FILE using XOR with the given key*/
 {	
-	char password=0;
 	unsigned int dictLength=0;
 	unsigned char *bigbuffer = malloc(length * sizeof(*bigbuffer));
 	int counter=0;
 	int i;
 	int keylength=strlen(key); 
-	for(i=0;i<keylength;i++)
-	{
-		password=password^key[i];
-	}
+	int text=0;
+	int charkey=0;
 	unsigned char buffer[1];
 	outfile=fopen(file,"rb");/*First we need to open outfile to read it as binary*/
 	if( fseek(outfile,4,SEEK_SET) != 0 )
@@ -52,12 +49,13 @@ int xorcode(FILE *outfile,char *key,int length, char *file,int compresslevel) /*
 	if(compresslevel!=0){
 		for(i=0;i<counter;i++)
 		{
-				//printf("Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);
+				/*printf("Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);*/
 				if(i>=8 && i<dictLength+8){
-					bigbuffer[i]=bigbuffer[i]^(unsigned char)password;
-
+					text=bigbuffer[i]-'A';
+					charkey=key[i%keylength]-'A';
+					bigbuffer[i]=(unsigned char)((text^charkey)+'A');
 				}
-				//printf("Po:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);
+				/*printf("Po:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);*/
 				if( fwrite((bigbuffer+i),1,1,outfile) !=  1 )
 				{
 					fclose(outfile);
@@ -70,19 +68,18 @@ int xorcode(FILE *outfile,char *key,int length, char *file,int compresslevel) /*
 		{
 				//printf("Jestem!Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);
 				if(i>=8){
-				//text=bigbuffer[i]-'A';
-				//charkey=key[i%keylength]-'A';
-				//bigbuffer[i]=(unsigned char)((text^charkey)+'A');
-				bigbuffer[i]=bigbuffer[i]^(unsigned char)password;
+				text=bigbuffer[i]-'A';
+				charkey=key[i%keylength]-'A';
+				bigbuffer[i]=(unsigned char)((text^charkey)+'A');
 				}
 				//printf("Przed:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);
 
-			if( fwrite((bigbuffer+i),1,1,outfile) != 1 )
-			{
-				fclose(outfile);
-				free(bigbuffer);
-				return 8;
-			}
+			if( fwrite((bigbuffer+i),1,1,outfile) !=  1 )
+				{
+					fclose(outfile);
+					free(bigbuffer);
+					return 8;
+				}
 		}
 	}
 	fclose(outfile);
@@ -91,7 +88,6 @@ int xorcode(FILE *outfile,char *key,int length, char *file,int compresslevel) /*
 }
 int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksum,char *tmpname) /*Overwrites FILE using XOR with the given key*/
 {	
-	char password=0;
 	unsigned int dictLength=0;
 	unsigned char *bigbuffer = malloc(length * sizeof(*bigbuffer));
 	unsigned char tmpSum;
@@ -100,29 +96,17 @@ int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksu
 	int counter=0;
 	int i;
 	int keylength=strlen(key); 
+	int text=0;
+	int charkey=0;
 	unsigned char buffer[1];
-	for(i=0;i<keylength;i++)
-	{
-		password=password^key[i];
-	}
 	outfile=fopen(file,"rb");/*First we need to open outfile to read it as binary*/
-	if( fseek(outfile,2,SEEK_SET) != 0)
-	{
-		fclose(outfile);
-		free(bigbuffer);
-		return 7;
-	}
+	fseek(outfile,2,SEEK_SET);
 	if(fread(buffer, 1, 1, outfile) == 1 )
         {
                 compressLevel = compressLevelMask & buffer[0];
                 compressLevel = compressLevel >> 6;
 	}
-	if( fseek(outfile,4,SEEK_SET) != 0 )
-	{
-		fclose(outfile);
-		free(bigbuffer);
-		return 7;
-	}
+	fseek(outfile,4,SEEK_SET);
 	for(i=0; i<3; i++)/*Method for reading dictionary length*/
 	{
 		if( fread(buffer, 1, 1, outfile) == 1)
@@ -131,12 +115,7 @@ int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksu
 			dictLength += buffer[0];
 		}
 	}
-	if( fseek(outfile,0,SEEK_SET) != 0)
-	{
-		fclose(outfile);
-		free(bigbuffer);
-		return 7;
-	}
+	fseek(outfile,0,SEEK_SET);
 	while(fread(buffer,1,1,outfile)==1) /*Reading the file and giving bigbuffer all the symbols*/
 	{
 		if(counter==length)
@@ -151,17 +130,21 @@ int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksu
 	if(compressLevel!=0){
 		for(i=0;i<counter;i++)
 		{
-				//printf("Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);
+				/*printf("Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);*/
 				if(i>=8 && i<dictLength+8){
-					bigbuffer[i]=bigbuffer[i]^(unsigned char)password;
+					text=bigbuffer[i]-'A';
+					charkey=key[i%keylength]-'A';
+					bigbuffer[i]=(unsigned char)((text^charkey)+'A');
 				}
-				//printf("Po:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);
+				/*printf("Po:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);*/
 		}
 	}else{
 		for(i=8;i<counter;i++)
 		{	
 			//printf("Przed:Bigbuffer[%d](%d)=%c\t",i,(int)bigbuffer[i],bigbuffer[i]);
-			bigbuffer[i]=bigbuffer[i]^(unsigned char)password;
+			text=bigbuffer[i]-'A';
+			charkey=key[i%keylength]-'A';
+			bigbuffer[i]=(unsigned char)((text^charkey)+'A');
 			//printf("Po:Bigbuffer[%d](%d)=%c\n",i,(int)bigbuffer[i],bigbuffer[i]);
 		}
 	}
@@ -174,18 +157,14 @@ int xorfile(FILE *outfile,char *key,int length, char *file,unsigned char checksu
 	{
 		tmpSum=tmpSum^(bigbuffer[i]);
 	}
+	//fprintf(stderr,"tmpSum:%d | checksum:%d\n",tmpSum,checksum);
 	if(tmpSum==checksum)
 	{	
 		fclose(outfile);
 		outfile=fopen(tmpname,"wb"); 
 		for(i=0;i<counter;i++)
 		{
-			if( fwrite((bigbuffer+i),1,1,outfile) != 1 )
-			{
-				fclose(outfile);
-				free(bigbuffer);
-				return 8;
-			}
+			fwrite((bigbuffer+i),1,1,outfile);
 		}
 		fclose(outfile);
 		free(bigbuffer);

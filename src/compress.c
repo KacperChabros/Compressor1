@@ -269,6 +269,7 @@ int binWrite(dictionary *dict, unsigned short *bigbuffer ,FILE *outfile,int coun
 	notCompressedAndDictLengthFlag += lastBitsOfDict;
 	checksum = checksum ^ notCompressedAndDictLengthFlag;
 
+	fprintf(stderr, "%d\n", checksum);
 	int returnCode = 0;
 	if( fseek(outfile,2,SEEK_SET) != 0 )	/*write flag and checksum*/
 		returnCode = 7;

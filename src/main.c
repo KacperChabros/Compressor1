@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 			time(&t);
 			char *tmpname=ctime(&t);
 			int returnCodeCyp2 = 0;
-			if( (returnCodeCyp2 = (xorfile(infile,password,file1->length,argv[1],checksum,tmpname)) != 0))
+			if( (returnCodeCyp2 = (xorfile(infile,password,file1->length,argv[1],checksum,tmpname))) != 0)
 			{
 				free(file1);
 				free(bigbuffer);
